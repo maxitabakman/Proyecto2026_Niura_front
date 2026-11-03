@@ -1,9 +1,18 @@
 import './guia.css';
+import flecha from '../../PACIENTE/seleccionVIDEO/flecha.png'
+import { useNavigate } from 'react-router-dom';
 
 export default function Guia() {
+    const navigate = useNavigate();
+
+    const handleNavigateBack = () => {
+        navigate (-1);
+    }
+    
     return (
         <div className="contenedor-guia">
             <div className="guia-content">
+                <img src={flecha} alt="flecha" className='flecha' onClick={handleNavigateBack}/>
                 <h1>Titulo</h1>
                 <div className="guia-section">
                     <h2>Subtitulo</h2>

@@ -8,6 +8,12 @@
     font-family: 'Atkinson Hyperlegible', sans-serif !important;
 }
 
+.flecha {
+    cursor: pointer;
+    width: 55px;
+    height: 55px;
+}
+
 .guia-content {
     background-color: #d2eaf4;
     width: 100%;
