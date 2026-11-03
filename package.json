@@ -1,41 +1,34 @@
 {
-  "dependencies": {
-    "@prisma/client": "^6.19.3",
-    "bcrypt": "^6.0.0",
-    "cloudinary": "^2.11.0",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
-    "multer": "^2.4.0",
-    "pg": "^8.23.0",
-    "socket.io": "^4.8.4",
-    "streamifier": "^0.1.1",
-    "zod": "^4.4.3"
-  },
-  "name": "proyecto2026_niura",
-  "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
-  "type": "commonjs",
+  "name": "niura",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon backend/server.js"
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/malerossi/Proyecto2026_Niura.git"
+  "dependencies": {
+    "@iconify/react": "^6.0.2",
+    "@tailwindcss/vite": "^4.3.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.2",
+    "tailwindcss": "^4.3.3"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/malerossi/Proyecto2026_Niura/issues"
-  },
-  "homepage": "https://github.com/malerossi/Proyecto2026_Niura#readme",
   "devDependencies": {
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
-    "nodemon": "^3.1.14",
-    "prisma": "^6.19.3"
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.0.4",
+    "eslint": "^10.8.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.65.0",
+    "vite": "^8.2.0"
   }
 }
