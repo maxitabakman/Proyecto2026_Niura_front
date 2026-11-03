@@ -10,4 +10,5 @@ export default defineConfig({
   server: {
     allowedHosts: true,
   },
+  base: `${process.env.TIC_BASE_PATH ?? ""}/`,
 })
