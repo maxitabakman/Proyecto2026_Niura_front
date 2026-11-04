@@ -9,32 +9,58 @@ import './registroMedico.css';
 export default function InicioSesionMedico() {
     const navigate = useNavigate();
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (nombre !== "" && apellido !== "" && mail !== "" && contraseña !== ""){
-            navigate('/medico/pacient');
-        }
-        else {
-            alert('Por favor, llenar sus datos.');
-        }
-    }
-
-    const {nombre, setNombre} = useMedico();
+    const { nombre, setNombre } = useMedico();
     const [apellido, setApellido] = useState<string>("");
     const [mail, setMail] = useState<string>("");
     const [contraseña, setContraseña] = useState<string>("");
-    const [matricula, setMatricula] = useState<File | null>(null);
-    const [matriculaTexto, setMatriculaTexto] = useState<string>("");
-    const handleImageChange = (e : React.ChangeEvent<HTMLInputElement>) => {
-        const archivo = e.target.files?.[0];
-        if (archivo) {
-            setMatricula(archivo);
+
+    const [cargando, setCargando] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+
+        if (!nombre.trim() || !apellido.trim() || !mail.trim() || !contraseña.trim()) {
+            alert('Por favor, llenar sus datos.');
+            return;
         }
-    }
+
+        setCargando(true);
+
+        try {
+            const response = await fetch('http://localhost:3000/usuarios/doctor', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: nombre,
+                    surname: apellido,
+                    email: mail,
+                    password: contraseña,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Error al registrar el médico');
+            }
+
+            // Registro exitoso -> Redirigir
+            navigate('/medico/pacient');
+
+        } catch (err: any) {
+            console.error('Error al registrar médico:', err);
+            setError(err.message || 'Error de conexión con el servidor');
+        } finally {
+            setCargando(false);
+        }
+    };
 
     const dominiosGmail = ["gmail.com", "yahoo.com.ar", "hotmail.com", "outlook.com"];
-    console.log (matricula)
-    const personal = mail.includes("@")? mail.split("@")[0] : mail;
+    const personal = mail.includes("@") ? mail.split("@")[0] : mail;
     const usuarioMail = personal.replace(/\s+/g, '');
 
     return (
@@ -51,24 +77,60 @@ export default function InicioSesionMedico() {
                     <h1 className="registro-titulo-medico">Registrate</h1>
                 </div>
 
-                <form className="Datos" onSubmit={handleSubmit}>
-                    <input type="email" list="listaDominios" required placeholder="Tu mail" id="mailMedico" className="registro-input" value={mail} onChange={(e) => setMail(e.target.value)} />
-                    <datalist id='listaDominios'>{usuarioMail && dominiosGmail.map((dominio) => (
-                        <option key={dominio} value={`${usuarioMail}@${dominio}`}></option>
-                    ))}</datalist>
+                {error && (
+                    <p style={{ color: 'red', textAlign: 'center', fontSize: '0.9rem', margin: '0.5rem 0' }}>
+                        {error}
+                    </p>
+                )}
 
-                    <input type="text" required placeholder="Tu nombre" id="nombreMedico" className="registro-input" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+                <form className="Datos" onSubmit={handleSubmit}>
+                    <input 
+                        type="email" 
+                        list="listaDominios" 
+                        required 
+                        placeholder="Tu mail" 
+                        id="mailMedico" 
+                        className="registro-input" 
+                        value={mail} 
+                        onChange={(e) => setMail(e.target.value)} 
+                    />
+                    <datalist id='listaDominios'>
+                        {usuarioMail && dominiosGmail.map((dominio) => (
+                            <option key={dominio} value={`${usuarioMail}@${dominio}`}></option>
+                        ))}
+                    </datalist>
+
+                    <input 
+                        type="text" 
+                        required 
+                        placeholder="Tu nombre" 
+                        id="nombreMedico" 
+                        className="registro-input" 
+                        value={nombre} 
+                        onChange={(e) => setNombre(e.target.value)} 
+                    />
                     
-                    <input type="text" required placeholder="Tu apellido" id="apellidoMedico" className="registro-input" value={apellido} onChange={(e) => setApellido(e.target.value)} />
+                    <input 
+                        type="text" 
+                        required 
+                        placeholder="Tu apellido" 
+                        id="apellidoMedico" 
+                        className="registro-input" 
+                        value={apellido} 
+                        onChange={(e) => setApellido(e.target.value)} 
+                    />
                     
-                    {/* Campo visual para la matrícula que encaja con el diseño */}
-                    <input type="text" required placeholder="Tu matrícula" className="registro-input" value={matriculaTexto} onChange={(e) => setMatriculaTexto(e.target.value)} />
-                    {/* El file de matrícula oculto pero funcional para tu backend */}
-                    <input type="file" id="matriculaMedico" className="campo-oculto" accept="image/*" onChange={handleImageChange} />
+                    <input 
+                        type="password" 
+                        required 
+                        placeholder="Tu contraseña" 
+                        id="contraseñaMedico" 
+                        className="registro-input" 
+                        value={contraseña} 
+                        onChange={(e) => setContraseña(e.target.value)} 
+                    />
                     
-                    <input type="password" required placeholder="Tu contraseña" id="contraseñaMedico" className="registro-input" value={contraseña} onChange={(e) => setContraseña(e.target.value)} />
-                    
-                    <button type='submit' id="Enviar" className="btn-confirmar-imagen">
+                    <button type='submit' id="Enviar" className="btn-confirmar-imagen" disabled={cargando}>
                         <img src={confirmar} alt="Confirmar" />
                     </button>
                 </form>
