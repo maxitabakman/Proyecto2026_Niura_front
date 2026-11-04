@@ -6,82 +6,138 @@ import flecha from '../EleccionEjercicio/flecha.png';
 import logo from '../../PACIENTE/registroPaciente/logo.png';
 
 export default function InicioSesionPaciente () {
-    const [ nombre, setNombre ] = useState<string> ('');
-    const [ apellido, setApellido ] = useState<string> ('');
+    const [ nombre, setNombre ] = useState<string>('');
+    const [ apellido, setApellido ] = useState<string>('');
+    const [ mail, setMail ] = useState<string>(''); // Nuevo estado para el email
     const [ contraseña, setContraseña ] = useState<string>('');
+    const [ cargando, setCargando ] = useState<boolean>(false);
+    const [ error, setError ] = useState<string | null>(null);
 
     const navigate = useNavigate();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (nombre == '' && apellido == '' && contraseña == '') {
-            alert('Porfavor, llenar sus datos.');
+        setError(null);
+
+        if (!nombre.trim() || !apellido.trim() || !mail.trim() || !contraseña.trim()) {
+            alert('Por favor, llenar todos sus datos.');
+            return;
         }
-        else {
-            navigate ('/paciente/ejercitar');
+
+        setCargando(true);
+
+        try {
+            const response = await fetch('http://localhost:3000/usuarios/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    nombre,
+                    apellido,
+                    email: mail,
+                    password: contraseña,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Error al iniciar sesión');
+            }
+
+            // Guardamos el token JWT y datos del usuario en localStorage
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+
+            // Redirección al área del paciente
+            navigate('/paciente/ejercitar');
+
+        } catch (err: any) {
+            console.error('Error en login paciente:', err);
+            setError(err.message || 'Error de conexión con el servidor');
+        } finally {
+            setCargando(false);
         }
-    }
+    };
 
     const handleNavigateBack = () => {
         navigate(-1);
-    }
+    };
 
     const handleNavigateRegistro = () => {
         navigate('/registroPaciente');
-    }
+    };
 
-return (
-    <div className="contenedor-pantalla-login">
-        <div className="logo-pantalla">
+    return (
+        <div className="contenedor-pantalla-login">
+            <div className="logo-pantalla">
                 <img src={logo} alt="niura" />
             </div>
-        <form className='DatosInicioPaciente' onSubmit={handleSubmit}>
-            
-            <div className="cabecera-form">
-                <img src={flecha} alt="Volver" className="flecha-volver" onClick={handleNavigateBack}/>
-                <h2 className="titulo-login-paciente">Inicia sesión</h2>
-            </div>
-            
-            <p className="texto-registro">
-                ¿No tienes una cuenta? <span className="link-registro" onClick={handleNavigateRegistro}>REGISTRATE</span>
-            </p>
+            <form className='DatosInicioPaciente' onSubmit={handleSubmit}>
+                
+                <div className="cabecera-form">
+                    <img src={flecha} alt="Volver" className="flecha-volver" onClick={handleNavigateBack}/>
+                    <h2 className="titulo-login-paciente">Inicia sesión</h2>
+                </div>
+                
+                <p className="texto-registro">
+                    ¿No tienes una cuenta? <span className="link-registro" onClick={handleNavigateRegistro}>REGISTRATE</span>
+                </p>
 
-            <input 
-                type="text" 
-                className='input-campo-paciente' 
-                id='nombre' 
-                value={nombre} 
-                onChange={(e) => setNombre(e.target.value)} 
-                required 
-                placeholder='Tu nombre'
-            />
+                {error && (
+                    <p style={{ color: 'red', textAlign: 'center', fontSize: '0.9rem', margin: '0.5rem 0' }}>
+                        {error}
+                    </p>
+                )}
 
-            <input 
-                type="text" 
-                className='input-campo-paciente' 
-                id='apellido' 
-                value={apellido} 
-                onChange={(e) => setApellido(e.target.value)} 
-                required 
-                placeholder='Tu apellido'
-            />
-            
-            <input 
-                type="password" 
-                className='input-campo-paciente' 
-                id='contraseña' 
-                value={contraseña} 
-                onChange={(e) => setContraseña(e.target.value)} 
-                required 
-                placeholder='Tu contraseña'
-            />
-            
-            {/* Botón transparente que contiene tu imagen */}
-            <button type="submit" className="btn-submit-invisible">
-                <img src={confirmar} alt="Confirmar" className="img-confirmar-login" />
-            </button>
-            
-        </form>
-    </div>
-)
+                <input 
+                    type="text" 
+                    className='input-campo-paciente' 
+                    id='nombre' 
+                    value={nombre} 
+                    onChange={(e) => setNombre(e.target.value)} 
+                    required 
+                    placeholder='Tu nombre'
+                />
+
+                <input 
+                    type="text" 
+                    className='input-campo-paciente' 
+                    id='apellido' 
+                    value={apellido} 
+                    onChange={(e) => setApellido(e.target.value)} 
+                    required 
+                    placeholder='Tu apellido'
+                />
+
+                {/* Campo de email integrado con tus estilos de paciente */}
+                <input 
+                    type="email" 
+                    className='input-campo-paciente' 
+                    id='email' 
+                    value={mail} 
+                    onChange={(e) => setMail(e.target.value)} 
+                    required 
+                    placeholder='Tu email'
+                />
+                
+                <input 
+                    type="password" 
+                    className='input-campo-paciente' 
+                    id='contraseña' 
+                    value={contraseña} 
+                    onChange={(e) => setContraseña(e.target.value)} 
+                    required 
+                    placeholder='Tu contraseña'
+                />
+                
+                {/* Botón transparente que contiene tu imagen */}
+                <button type="submit" className="btn-submit-invisible" disabled={cargando}>
+                    <img src={confirmar} alt="Confirmar" className="img-confirmar-login" />
+                </button>
+                
+            </form>
+        </div>
+    );
 }

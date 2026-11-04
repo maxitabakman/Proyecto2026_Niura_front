@@ -44,7 +44,7 @@ export default function IniciodeSesion() {
                 console.log("Usuario creado:", resultado.user);
 
                 alert("Usuario creado con éxito");
-                navigate('/paciente/ejercitar');
+                navigate('/inicioSesionPaciente');
 
             } catch (error) {
                 console.error("Error al registrar:", error);

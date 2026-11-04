@@ -49,7 +49,7 @@ export default function InicioSesionMedico() {
             }
 
             // Registro exitoso -> Redirigir
-            navigate('/medico/pacient');
+            navigate('/inicioSesionMedico');
 
         } catch (err: any) {
             console.error('Error al registrar médico:', err);

@@ -2,33 +2,72 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import confirmar from '../../PACIENTE/confirmarSeleccionEjercicio/btn-confirmar.png';
 import flecha from '../../PACIENTE/EleccionEjercicio/flecha.png'; 
-import './inicioSesionMedico.css'
+import './inicioSesionMedico.css';
 import logo from '../../PACIENTE/registroPaciente/logo.png';
 
 export default function InicioSesionMedico () {
-    const [ nombre, setNombre ] = useState<string> ('');
-    const [ apellido, setApellido ] = useState<string> ('');
+    const [ nombre, setNombre ] = useState<string>('');
+    const [ apellido, setApellido ] = useState<string>('');
+    const [ mail, setMail ] = useState<string>(''); // Nuevo estado para el email
     const [ contraseña, setContraseña ] = useState<string>('');
+    const [ cargando, setCargando ] = useState<boolean>(false);
+    const [ error, setError ] = useState<string | null>(null);
+
     const navigate = useNavigate();
 
-    const handleSubmit = (e: React.FormEvent) => {
-            e.preventDefault();
-            if (nombre == '' && apellido == '' && contraseña == '') {
-                alert('Porfavor, llenar sus datos.');
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+
+        if (!nombre.trim() || !apellido.trim() || !mail.trim() || !contraseña.trim()) {
+            alert('Por favor, llenar todos sus datos.');
+            return;
+        }
+
+        setCargando(true);
+
+        try {
+            const response = await fetch('http://localhost:3000/usuarios/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    nombre,
+                    apellido,
+                    email: mail,
+                    password: contraseña,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Error al iniciar sesión');
             }
-            else {
-                navigate ('/medico/paginaGeneralMedico');
-            }
+
+            // Guardamos el token devuelto y los datos del usuario
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+
+            navigate('/medico/pacient');
+
+        } catch (err: any) {
+            console.error('Error en login médico:', err);
+            setError(err.message || 'Error de conexión con el servidor');
+        } finally {
+            setCargando(false);
         }
-    
-        const handleNavigateBack = () => {
-            navigate(-1);
-        }
-    
-        const handleNavigateRegistro = () => {
-            navigate('/registroMedico');
-        }
- 
+    };
+
+    const handleNavigateBack = () => {
+        navigate(-1);
+    };
+
+    const handleNavigateRegistro = () => {
+        navigate('/registroMedico');
+    };
+
     return (
         <div className="contenedor-pantalla-login-medico">
             <div className="logo-pantalla">
@@ -44,7 +83,13 @@ export default function InicioSesionMedico () {
                 <p className="texto-registro">
                     ¿No tienes una cuenta? <span className="link-registro" onClick={handleNavigateRegistro}>REGISTRATE</span>
                 </p>
-    
+
+                {error && (
+                    <p style={{ color: 'red', textAlign: 'center', fontSize: '0.9rem', margin: '0.5rem 0' }}>
+                        {error}
+                    </p>
+                )}
+
                 <input 
                     type="text" 
                     className='input-campo' 
@@ -54,7 +99,7 @@ export default function InicioSesionMedico () {
                     required 
                     placeholder='Tu nombre'
                 />
-    
+
                 <input 
                     type="text" 
                     className='input-campo' 
@@ -63,6 +108,17 @@ export default function InicioSesionMedico () {
                     onChange={(e) => setApellido(e.target.value)} 
                     required 
                     placeholder='Tu apellido'
+                />
+
+                {/* Campo de email integrado */}
+                <input 
+                    type="email" 
+                    className='input-campo' 
+                    id='email' 
+                    value={mail} 
+                    onChange={(e) => setMail(e.target.value)} 
+                    required 
+                    placeholder='Tu email'
                 />
                 
                 <input 
@@ -75,12 +131,12 @@ export default function InicioSesionMedico () {
                     placeholder='Tu contraseña'
                 />
                 
-                {/* Botón transparente que contiene tu imagen */}
-                <button type="submit" className="btn-submit-invisible">
+                {/* Botón transparente con la imagen de confirmación */}
+                <button type="submit" className="btn-submit-invisible" disabled={cargando}>
                     <img src={confirmar} alt="Confirmar" className="img-confirmar-login" />
                 </button>
                 
             </form>
         </div>
-    )
+    );
 }

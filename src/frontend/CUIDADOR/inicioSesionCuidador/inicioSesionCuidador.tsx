@@ -5,21 +5,58 @@ import confirmar from '../../PACIENTE/confirmarSeleccionEjercicio/btn-confirmar.
 import flecha from '../../PACIENTE/EleccionEjercicio/flecha.png';
 import logo from '../../PACIENTE/registroPaciente/logo.png';
 
- 
 export default function InicioSesionCuidador () {
-    const [ nombre, setNombre ] = useState<string> ('');
-    const [ apellido, setApellido ] = useState<string> ('');
+    const [ nombre, setNombre ] = useState<string>('');
+    const [ apellido, setApellido ] = useState<string>('');
+    const [ mail, setMail ] = useState<string>(''); // <-- Nuevo campo para el email
     const [ contraseña, setContraseña ] = useState<string>('');
+    const [ cargando, setCargando ] = useState<boolean>(false);
+    const [ error, setError ] = useState<string | null>(null);
 
     const navigate = useNavigate();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (nombre == '' && apellido == '' && contraseña == '') {
-            alert('Porfavor, llenar sus datos.');
+        setError(null);
+
+        if (!nombre.trim() || !apellido.trim() || !mail.trim() || !contraseña.trim()) {
+            alert('Por favor, llenar todos sus datos.');
+            return;
         }
-        else {
-            navigate ('/cuidador/paginagralcuidador');
+
+        setCargando(true);
+
+        try {
+            const response = await fetch('http://localhost:3000/usuarios/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    nombre,
+                    apellido,
+                    email: mail,
+                    password: contraseña,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Error al iniciar sesión');
+            }
+
+            // Guardamos el token devuelto
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+
+            navigate('/cuidador/paginagralcuidador');
+
+        } catch (err: any) {
+            console.error('Error en login:', err);
+            setError(err.message || 'Error de conexión con el servidor');
+        } finally {
+            setCargando(false);
         }
     }
 
@@ -55,6 +92,12 @@ export default function InicioSesionCuidador () {
                     </span>
                 </p>
 
+                {error && (
+                    <p style={{ color: 'red', textAlign: 'center', fontSize: '0.9rem', margin: '0.5rem 0' }}>
+                        {error}
+                    </p>
+                )}
+
                 <div className="contenedor-inputs">
                     <input 
                         type="text" 
@@ -75,6 +118,17 @@ export default function InicioSesionCuidador () {
                         required 
                         placeholder="Tu apellido"
                     />
+
+                    {/* Campo de email dentro del mismo diseño */}
+                    <input 
+                        type="email" 
+                        className="input-campo" 
+                        id="email" 
+                        value={mail} 
+                        onChange={(e) => setMail(e.target.value)} 
+                        required 
+                        placeholder="Tu email"
+                    />
                     
                     <input 
                         type="password" 
@@ -87,7 +141,7 @@ export default function InicioSesionCuidador () {
                     />
                 </div>
                 
-                <button type="submit" className="btn-submit-invisible">
+                <button type="submit" className="btn-submit-invisible" disabled={cargando}>
                     <img src={confirmar} alt="Confirmar" className="img-confirmar-login"/>
                 </button>
                 

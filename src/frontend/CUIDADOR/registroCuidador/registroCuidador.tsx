@@ -49,7 +49,7 @@ export default function RegistroCuidador () {
             }
 
             // Registro exitoso -> Redirigir
-            navigate('/cuidador/paginagralcuidador');
+            navigate('/inicioSesionCuidador');
 
         } catch (err: any) {
             console.error('Error al registrar:', err);
