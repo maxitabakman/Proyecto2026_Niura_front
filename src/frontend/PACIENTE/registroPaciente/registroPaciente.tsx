@@ -1,48 +1,65 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePaciente } from '../../Contexts/contextPaciente';
-import confirmar from '../confirmarSeleccionEjercicio/btn-confirmar.png'
-import logo from './logo.png'
-import arrowback from '../EleccionEjercicio/flecha.png'
-import './registroPaciente.css'
+import confirmar from '../confirmarSeleccionEjercicio/btn-confirmar.png';
+import logo from './logo.png';
+import arrowback from '../EleccionEjercicio/flecha.png';
+import './registroPaciente.css';
 
+export default function IniciodeSesion() {
 
-export default function IniciodeSesion (){
-
-    const {nombre, setNombre} = usePaciente();
+    const { nombre, setNombre } = usePaciente();
     const [apellido, setApellido] = useState<string>("");
     const [mail, setMail] = useState<string>("");
     const [contraseña, setContraseña] = useState<string>("");
 
-    const navigate = useNavigate()
+    const navigate = useNavigate();
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        if (nombre !== "" && apellido !== "" && mail !== "" && contraseña !== ""){
-            navigate ('/paciente/ejercitar')
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (nombre !== "" && apellido !== "" && mail !== "" && contraseña !== "") {
+
+            try {
+                const response = await fetch("http://localhost:3000/usuarios/paciente", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        name: nombre,
+                        surname: apellido,
+                        email: mail,
+                        password: contraseña
+                    })
+                });
+
+                const resultado = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(resultado.message || "Error al crear el usuario");
+                }
+
+                console.log("Usuario creado:", resultado.user);
+
+                alert("Usuario creado con éxito");
+                navigate('/paciente/ejercitar');
+
+            } catch (error) {
+                console.error("Error al registrar:", error);
+                alert(error instanceof Error ? error.message : "Error al conectar con el servidor");
+            }
+
+        } else {
+            alert('Porfavor, llenar sus datos.');
         }
-        else {
-            alert ('Porfavor, llenar sus datos.')
-        }
-    }
+    };
 
-    const dominiosGmail = ["gmail.com", "yahoo.com.ar", "hotmail.com", "outlook.com"]
+    const dominiosGmail = ["gmail.com", "yahoo.com.ar", "hotmail.com", "outlook.com"];
 
-    const personal= mail.includes("@")? mail.split("@")[0] : mail;
-    const usuarioMail = personal.replace(/\s+/g, '')
-    fetch("http://localhost:3000/usuario/loginGeneral", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            "rol": "paciente",
-            nombre,
-            apellido,
-            mail,
-            contraseña,
-        })
-    })
+    const personal = mail.includes("@") ? mail.split("@")[0] : mail;
+    const usuarioMail = personal.replace(/\s+/g, '');
 
     return (
         <div className="registro-pantalla">
@@ -60,9 +77,12 @@ export default function IniciodeSesion (){
 
                 <form className="Datos" onSubmit={handleSubmit}>
                     <input type="email" list='listaDominios' required placeholder="Tu mail" id="mailPaciente" className="registro-input" value={mail} onChange={(e) => setMail(e.target.value)} />
-                    <datalist id='listaDominios'>{usuarioMail && dominiosGmail.map((dominio) => (
-                        <option key={dominio} value={`${usuarioMail}@${dominio}`}></option>
-                    ))}</datalist>
+
+                    <datalist id='listaDominios'>
+                        {usuarioMail && dominiosGmail.map((dominio) => (
+                            <option key={dominio} value={`${usuarioMail}@${dominio}`}></option>
+                        ))}
+                    </datalist>
 
                     <input type="text" required placeholder="Tu nombre" id="nombrePaciente" className="registro-input" value={nombre} onChange={(e) => setNombre(e.target.value)} />
 
