@@ -10,23 +10,58 @@ export default function RegistroCuidador () {
 
     const navigate = useNavigate();
 
-    const {nombre, setNombre} = useCuidador();
+    const { nombre, setNombre } = useCuidador();
     const [apellido, setApellido] = useState<string>('');
     const [mail, setMail] = useState<string>('');
     const [contraseña, setContraseña] = useState<string>('');
+    const [cargando, setCargando] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (nombre !== "" && apellido !== "" && mail !== ""  && contraseña !== ""){
-            navigate('/cuidador/paginagralcuidador');
-        }
-        else {
+        setError(null);
+
+        if (!nombre.trim() || !apellido.trim() || !mail.trim() || !contraseña.trim()) {
             alert('Por favor, llenar sus datos.');
+            return;
+        }
+
+        setCargando(true);
+
+        try {
+            const response = await fetch('http://localhost:3000/usuarios/acompanante', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: nombre,
+                    surname: apellido,
+                    email: mail,
+                    password: contraseña
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Error al registrar el cuidador');
+            }
+
+            // Registro exitoso -> Redirigir
+            navigate('/cuidador/paginagralcuidador');
+
+        } catch (err: any) {
+            console.error('Error al registrar:', err);
+            setError(err.message || 'Ocurrió un error al intentar conectarse con el servidor');
+        } finally {
+            setCargando(false);
         }
     }
 
-    const dominiosGmail = ['@gmail.com', "yahoo.com.ar", "hotmail.com", "outlook.com"];
-    const personal = mail.includes("@")? mail.split("@")[0] : mail;
+    // Normalizados sin '@' inicial para evitar dobles arrobas '@@'
+    const dominiosGmail = ['gmail.com', 'yahoo.com.ar', 'hotmail.com', 'outlook.com'];
+    const personal = mail.includes("@") ? mail.split("@")[0] : mail;
     const usuarioMail = personal.replace(/\s+/g, '');
 
     return (
@@ -43,19 +78,60 @@ export default function RegistroCuidador () {
                     <h1 className="registro-titulo-cuidador">Registrate</h1>
                 </div>
 
-                <form onSubmit={handleSubmit} className='Datos'>
-                    <input type="text" list='opcionesGmail' required placeholder='Tu mail' id='gmailCuidador' className='registro-input-cuidador' value={mail} onChange={(e) => setMail(e.target.value)} />
-                    <datalist id='opcionesGmail'>{usuarioMail && dominiosGmail.map((dominio) => (
-                        <option key={dominio} value={`${usuarioMail}@${dominio}`}></option>
-                    ))}</datalist>
+                {error && (
+                    <p style={{ color: 'red', textAlign: 'center', fontSize: '0.9rem' }}>
+                        {error}
+                    </p>
+                )}
 
-                    <input type="text" required placeholder='Tu nombre' id='nombreCuidador' className='registro-input-cuidador' value={nombre} onChange={(e) => setNombre(e.target.value)} />
+                <form onSubmit={handleSubmit} className='Datos'>
+                    <input 
+                        type="email" 
+                        list='opcionesGmail' 
+                        required 
+                        placeholder='Tu mail' 
+                        id='gmailCuidador' 
+                        className='registro-input-cuidador' 
+                        value={mail} 
+                        onChange={(e) => setMail(e.target.value)} 
+                    />
+                    <datalist id='opcionesGmail'>
+                        {usuarioMail && dominiosGmail.map((dominio) => (
+                            <option key={dominio} value={`${usuarioMail}@${dominio}`}></option>
+                        ))}
+                    </datalist>
+
+                    <input 
+                        type="text" 
+                        required 
+                        placeholder='Tu nombre' 
+                        id='nombreCuidador' 
+                        className='registro-input-cuidador' 
+                        value={nombre} 
+                        onChange={(e) => setNombre(e.target.value)} 
+                    />
                     
-                    <input type="text" required placeholder='Tu apellido' id='apellidoCuidador' className='registro-input-cuidador' value={apellido} onChange={(e) => setApellido(e.target.value)} />
+                    <input 
+                        type="text" 
+                        required 
+                        placeholder='Tu apellido' 
+                        id='apellidoCuidador' 
+                        className='registro-input-cuidador' 
+                        value={apellido} 
+                        onChange={(e) => setApellido(e.target.value)} 
+                    />
                     
-                    <input type="password" required placeholder='Tu contraseña' id='contraseñaCuidador' className='registro-input-cuidador' value={contraseña} onChange={(e) => setContraseña(e.target.value)} />
+                    <input 
+                        type="password" 
+                        required 
+                        placeholder='Tu contraseña' 
+                        id='contraseñaCuidador' 
+                        className='registro-input-cuidador' 
+                        value={contraseña} 
+                        onChange={(e) => setContraseña(e.target.value)} 
+                    />
                     
-                    <button type='submit' id='Enviar' className='btn-confirmar-imagen'>
+                    <button type='submit' id='Enviar' className='btn-confirmar-imagen' disabled={cargando}>
                         <img src={confirmar} alt="Confirmar" />
                     </button>
                 </form>
