@@ -1,8 +1,30 @@
 {
+<<<<<<< HEAD
   "name": "niura",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+=======
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "bcrypt": "^6.0.0",
+    "cloudinary": "^2.11.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.4.0",
+    "pg": "^8.23.0",
+    "socket.io": "^4.8.4",
+    "streamifier": "^0.1.1",
+    "zod": "^4.4.3"
+  },
+  "name": "proyecto2026_niura",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "type": "commonjs",
+>>>>>>> Proyecto2026_Niura/main
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
