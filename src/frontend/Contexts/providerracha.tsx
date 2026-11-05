@@ -1,71 +1,82 @@
-import  { useState, useEffect, useMemo, type ReactNode } from "react";
-import { RachaContext, type DiaRacha } from "./contextracha";
+import { useEffect, useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
+import { RachaContext } from './contextracha';
 
-const calcularRacha = (rachas: DiaRacha[]): [number, number] => {
-  let rachamaxima = 0;
-  let conteoRacha = 0;
+interface RespuestaRacha {
+  message?: string;
+  racha?: number | string;
+}
 
-  for (let i = 0; i < rachas.length; i++) {
-    if (rachas[i].completado) {
-      conteoRacha++;
-      if (conteoRacha > rachamaxima) {
-        rachamaxima = conteoRacha;
-      }
-    } else {
-      conteoRacha = 0;
-    }
+interface UsuarioGuardado {
+  rol?: number;
+}
+
+function esPacienteConSesion() {
+  if (!localStorage.getItem('token')) return false;
+  try {
+    const usuario = JSON.parse(localStorage.getItem('user') || 'null') as UsuarioGuardado | null;
+    return Number(usuario?.rol) === 0;
+  } catch {
+    return false;
   }
-
-  return [conteoRacha, rachamaxima];
-};
+}
 
 interface RachaProviderProps {
   children: ReactNode;
 }
 
-export function RachaProvider({ children}: RachaProviderProps) {
-  const [historial, setHistorial] = useState<DiaRacha[]>([]);
+export function RachaProvider({ children }: RachaProviderProps) {
+  const { pathname } = useLocation();
+  const esPaciente = esPacienteConSesion();
+  const [rachaActual, setRachaActual] = useState(0);
+  const [cargando, setCargando] = useState(esPacienteConSesion);
+  const [error, setError] = useState<string | null>(null);
 
-  // Petición al backend para traer el historial del usuario
   useEffect(() => {
+    if (!esPaciente) return;
 
+    const controlador = new AbortController();
+    async function cargarRacha() {
+      setCargando(true);
+      try {
+        const respuesta = await fetch('http://localhost:3000/paciente/verRacha', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+          },
+          signal: controlador.signal,
+        });
+        const datos: RespuestaRacha = await respuesta.json();
+        if (!respuesta.ok || datos.racha === undefined) {
+          throw new Error(datos.message || `El servidor respondió ${respuesta.status}.`);
+        }
 
-    fetch(`https://mocki.io/v1/84dbfc80-b7f3-4554-bcec-e3a45736044a`, { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data: { fecha: string; completado: boolean }[]) => {
-        // Mapeamos los datos para convertir la fecha en texto a objeto Date
-        const historialFormateado: DiaRacha[] = data.map((item) => ({
-          fecha: new Date(item.fecha),
-          completado: item.completado,
-        }));
-        
-        setHistorial(historialFormateado);
-      })
-      .catch((error) => console.error("Error al obtener el historial:", error));
-  }, []);
+        const racha = Number(datos.racha);
+        if (!Number.isFinite(racha) || racha < 0) {
+          throw new Error('El servidor devolvió un valor de racha inválido.');
+        }
+        setRachaActual(racha);
+        setError(null);
+      } catch (fallo) {
+        if (controlador.signal.aborted) return;
+        console.error('Error al consultar la racha del paciente:', fallo);
+        setError(
+          fallo instanceof Error ? fallo.message : 'No se pudo cargar la racha.',
+        );
+      } finally {
+        if (!controlador.signal.aborted) setCargando(false);
+      }
+    }
 
-  const [rachaActual, rachaMaxima] = useMemo(
-    () => calcularRacha(historial),
-    [historial]
-  );
-
-  const toggleDia = (fechaTarget: Date) => {
-    setHistorial((prevHistorial) =>
-      prevHistorial.map((dia) =>
-        dia.fecha.getTime() === fechaTarget.getTime()
-          ? { ...dia, completado: !dia.completado }
-          : dia
-      )
-    );
-  };
+    void cargarRacha();
+    return () => controlador.abort();
+  }, [esPaciente, pathname]);
 
   return (
     <RachaContext.Provider
       value={{
-        rachaActual,
-        rachaMaxima,
-        historial,
-        toggleDia,
+        rachaActual: esPaciente ? rachaActual : 0,
+        cargando: esPaciente && cargando,
+        error: esPaciente ? error : null,
       }}
     >
       {children}

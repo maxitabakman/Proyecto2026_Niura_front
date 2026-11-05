@@ -1,124 +1,130 @@
-import { useEffect, useState } from "react";
-import type { CSSProperties } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-/* ================================================================== */
-/* TIPOS: así llega cada notificación del back                         */
-/* ================================================================== */
-export type TipoNotificacion =
-  | "emergencia_ambulancia"
-  | "solicitud_vinculo"
-  | "mensaje_chat"
-  | "alerta_racha";
+type TipoNotificacion = 'solicitud_vinculo' | 'mensaje_chat' | 'alerta_racha';
 
-export type PrioridadNotificacion = "alta" | "media" | "baja";
-
-export interface Remitente {
-  nombre: string;
-  apellido: string;
-  avatar_url: string;
-}
-
-export interface Redireccion {
-  ruta: string;
-  id_referencia: number;
-}
-
-export interface DatosBackNotificacion {
-  id_notificacion: number;
+interface NotificacionCuidador {
+  id: number | string;
   tipo: TipoNotificacion;
-  prioridad: PrioridadNotificacion;
   titulo: string;
   mensaje: string;
-  remitente: Remitente;
-  fecha_envio: string;
+  pacienteId: number | null;
+  creadoEn: string;
   leida: boolean;
-  redireccion?: Redireccion;
 }
 
-/* ================================================================== */
-/* BACK (mocki)                                                        */
-/*                                                                     */
-/* Formato propuesto para el back real:                                */
-/*  notificaciones → DatosBackNotificacion[]                           */
-/*  (directamente la lista, sin objeto alrededor; son todas las        */
-/*   notificaciones, sin filtrar por tipo de usuario)                  */
-/*  eliminar notificación → { id_notificacion }                        */
-/*  (se llama al tocar una notificación, antes de redirigir)           */
-/* ================================================================== */
-const URL_NOTIFICACIONES = "https://mocki.io/v1/f0be5fa9-b312-4338-8e26-e3fdea68030c";
-// Mocki que responde {"data":"ok"}
-const URL_ELIMINAR_NOTIFICACION = "https://mocki.io/v1/d42ede49-cf64-42f1-8da6-d7f40d7236b5";
-
-// Mocki solo acepta GET, así que los datos van en la URL.
-// Con el back real: pasar a POST/DELETE con los datos en el body.
-async function pedir(url: string, datos?: Record<string, string>) {
-  const consulta = datos ? `?${new URLSearchParams(datos)}` : "";
-  const respuesta = await fetch(`${url}${consulta}`);
-  if (!respuesta.ok) throw new Error(`El servidor respondió ${respuesta.status}`);
-  return respuesta.json();
+interface RespuestaNotificaciones {
+  message?: string;
+  notificaciones?: NotificacionCuidador[];
 }
 
-// Le pide al back que saque la notificación (le pasamos el id de la que se tocó)
-async function eliminarEnBack(idNotificacion: number) {
-  const respuesta = await pedir(URL_ELIMINAR_NOTIFICACION, {
-    id_notificacion: String(idNotificacion),
-  });
-  // SOLO PRUEBAS: el mocki responde {"data":"ok"}. Borrar con el back real.
-  if (respuesta?.data !== "ok") throw new Error("Respuesta inesperada");
-}
-
-/* ================================================================== */
-/* PANTALLA                                                            */
-/* ================================================================== */
-const ESCALA = 1;
+const API_BASE = 'http://localhost:3000/acompanante/notificaciones';
 const estiloEscala = {
-  "--u": `max(0.55px, calc(min(100vw / 1366, 100vh / 768) * ${ESCALA}))`,
+  '--u': 'max(0.55px, calc(min(100vw / 1366, 100vh / 768)))',
 } as CSSProperties;
 
-export default function Noticias() {
-  const navigate = useNavigate();
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(false);
-  const [notificaciones, setNotificaciones] = useState<DatosBackNotificacion[]>([]);
-  const [enviando, setEnviando] = useState(false);
+function obtenerDestino(notificacion: NotificacionCuidador) {
+  if (notificacion.tipo === 'mensaje_chat') return '/cuidador/reddecontactosmia';
+  return '/cuidador/paginagralcuidador';
+}
 
-  // Al entrar: pedir las notificaciones (una sola vez)
+export default function NoticiasCuidador() {
+  const navigate = useNavigate();
+  const [notificaciones, setNotificaciones] = useState<NotificacionCuidador[]>([]);
+  const [cargando, setCargando] = useState(() => Boolean(localStorage.getItem('token')));
+  const [error, setError] = useState<string | null>(() =>
+    localStorage.getItem('token') ? null : 'Iniciá sesión para ver tus notificaciones.',
+  );
+  const [procesandoId, setProcesandoId] = useState<string | null>(null);
+  const [mensajeEstado, setMensajeEstado] = useState('');
+
   useEffect(() => {
-    pedir(URL_NOTIFICACIONES)
-      .then((lista) => {
-        // Tiene que ser una lista; si no, la pantalla se rompería
-        if (!Array.isArray(lista)) throw new Error("El back no devolvió una lista de notificaciones");
-        setNotificaciones(lista);
-      })
-      .catch((e) => {
-        console.error(e);
-        setError(true);
-      })
-      .finally(() => setCargando(false));
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const controlador = new AbortController();
+    async function cargarNotificaciones() {
+      try {
+        const respuesta = await fetch(API_BASE, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controlador.signal,
+        });
+        const datos: RespuestaNotificaciones = await respuesta.json();
+        if (!respuesta.ok) {
+          throw new Error(datos.message || `El servidor respondió ${respuesta.status}.`);
+        }
+        if (!Array.isArray(datos.notificaciones)) {
+          throw new Error('El servidor devolvió una lista de notificaciones inválida.');
+        }
+
+        setNotificaciones(datos.notificaciones);
+        setError(null);
+      } catch (fallo) {
+        if (controlador.signal.aborted) return;
+        console.error('Error al cargar las notificaciones del cuidador:', fallo);
+        setError(
+          fallo instanceof Error
+            ? fallo.message
+            : 'No se pudieron cargar las notificaciones.',
+        );
+      } finally {
+        if (!controlador.signal.aborted) setCargando(false);
+      }
+    }
+
+    void cargarNotificaciones();
+    const intervalo = window.setInterval(() => void cargarNotificaciones(), 30_000);
+    window.addEventListener('focus', cargarNotificaciones);
+    return () => {
+      controlador.abort();
+      window.clearInterval(intervalo);
+      window.removeEventListener('focus', cargarNotificaciones);
+    };
   }, []);
 
-  // Al tocar una notificación: se saca del back y, si el back confirma,
-  // desaparece de la lista y vamos a la página de su redirección.
-  async function abrir(n: DatosBackNotificacion) {
-    if (!n.redireccion || enviando) return;
-    setEnviando(true);
+  async function abrirNotificacion(notificacion: NotificacionCuidador) {
+    const id = String(notificacion.id);
+    if (procesandoId !== null) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setMensajeEstado('Tu sesión venció. Iniciá sesión nuevamente.');
+      return;
+    }
+
+    setProcesandoId(id);
+    setMensajeEstado('');
     try {
-      await eliminarEnBack(n.id_notificacion);
-      setNotificaciones((anteriores) =>
-        anteriores.filter((x) => x.id_notificacion !== n.id_notificacion),
+      const respuesta = await fetch(`${API_BASE}/${id}/leida`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const datos: { message?: string } = await respuesta.json();
+      if (!respuesta.ok) {
+        throw new Error(datos.message || `El servidor respondió ${respuesta.status}.`);
+      }
+
+      setNotificaciones((actuales) =>
+        actuales.map((actual) =>
+          String(actual.id) === id ? { ...actual, leida: true } : actual,
+        ),
       );
-      navigate(n.redireccion.ruta);
-    } catch (e) {
-      console.error(e); // si falla, la notificación se queda y no se navega
+      navigate(obtenerDestino(notificacion));
+    } catch (fallo) {
+      console.error('Error al abrir la notificación del cuidador:', fallo);
+      setMensajeEstado(
+        fallo instanceof Error
+          ? fallo.message
+          : 'No se pudo actualizar la notificación.',
+      );
     } finally {
-      setEnviando(false);
+      setProcesandoId(null);
     }
   }
 
-  // Las más nuevas arriba
   const ordenadas = [...notificaciones].sort(
-    (a, b) => new Date(b.fecha_envio).getTime() - new Date(a.fecha_envio).getTime(),
+    (a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime(),
   );
 
   return (
@@ -126,39 +132,65 @@ export default function Noticias() {
       style={estiloEscala}
       className="mx-auto w-[calc(var(--u)*903)] max-w-full font-[Helvetica,Arial,sans-serif]"
     >
-      <div className="min-h-[calc(var(--u)*500)] rounded-[calc(var(--u)*10)] bg-[#b3d9e6] px-[calc(var(--u)*24)] py-[calc(var(--u)*40)] shadow-[0_4px_8px_rgba(0,0,0,0.3)] md:pb-[calc(var(--u)*40)] md:pl-[calc(var(--u)*47)] md:pt-[calc(var(--u)*68)]">
+      <div className="min-h-[calc(var(--u)*500)] rounded-[calc(var(--u)*10)] bg-[#b3d9e6] px-[calc(var(--u)*24)] py-[calc(var(--u)*40)] shadow-[0_4px_8px_rgba(0,0,0,0.3)] md:pl-[calc(var(--u)*47)] md:pt-[calc(var(--u)*40)]">
+        <h1 className="mb-[calc(var(--u)*20)] text-[length:calc(var(--u)*26)] font-bold text-[#18243b]">
+          Notificaciones
+        </h1>
         {cargando && (
-          <p className="text-[length:calc(var(--u)*22)] text-[#4b5c78]">Cargando notificaciones…</p>
+          <p role="status" className="text-[length:calc(var(--u)*22)] text-[#4b5c78]">
+            Cargando notificaciones...
+          </p>
         )}
         {error && (
-          <p className="text-[length:calc(var(--u)*22)] text-[#a32020]">
-            No pudimos cargar las notificaciones. Probá recargar la página.
+          <p role="alert" className="text-[length:calc(var(--u)*22)] text-[#a32020]">
+            {error}
+          </p>
+        )}
+        {mensajeEstado && (
+          <p role="alert" className="mb-[calc(var(--u)*12)] text-[length:calc(var(--u)*18)] text-[#a32020]">
+            {mensajeEstado}
           </p>
         )}
         {!cargando && !error && ordenadas.length === 0 && (
           <p className="text-[length:calc(var(--u)*22)] text-black">No hay notificaciones.</p>
         )}
 
-        <ul className="flex w-[calc(var(--u)*655)] max-w-full flex-col gap-[calc(var(--u)*12)]">
-          {ordenadas.map((n) => (
-            <li key={n.id_notificacion}>
-              {/* Sin redirección no se puede tocar */}
-              <button
-                type="button"
-                disabled={!n.redireccion || enviando}
-                onClick={() => abrir(n)}
-                className="block w-full rounded-[calc(var(--u)*10)] bg-[#ddeafd] px-[calc(var(--u)*23)] py-[calc(var(--u)*10)] text-left shadow-[0_3px_4px_rgba(0,0,0,0.3)] enabled:cursor-pointer enabled:hover:bg-[#cfe1fb]"
-              >
-                <span className="block text-[length:calc(var(--u)*15)] font-bold uppercase leading-tight text-black">
-                  {n.remitente.nombre}
-                </span>
-                <span className="mt-[calc(var(--u)*6)] block text-[length:calc(var(--u)*14)] leading-tight text-black">
-                  {n.mensaje}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        {!cargando && !error && (
+          <ul className="flex w-[calc(var(--u)*655)] max-w-full flex-col gap-[calc(var(--u)*12)]">
+            {ordenadas.map((notificacion) => (
+              <li key={notificacion.id}>
+                <button
+                  type="button"
+                  disabled={procesandoId !== null}
+                  onClick={() => void abrirNotificacion(notificacion)}
+                  className={`flex min-h-[calc(var(--u)*70)] w-full items-center justify-between gap-[calc(var(--u)*12)] rounded-[calc(var(--u)*10)] px-[calc(var(--u)*23)] py-[calc(var(--u)*10)] text-left text-black shadow-[0_3px_4px_rgba(0,0,0,0.3)] disabled:opacity-60 ${
+                    notificacion.leida ? 'bg-[#c6d9e9]' : 'bg-[#ddeafd]'
+                  }`}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[length:calc(var(--u)*18)] font-bold">
+                      {notificacion.titulo}
+                    </span>
+                    <span className="mt-[calc(var(--u)*6)] block text-[length:calc(var(--u)*15)] leading-tight">
+                      {notificacion.mensaje}
+                    </span>
+                    <time
+                      dateTime={notificacion.creadoEn}
+                      className="mt-[calc(var(--u)*8)] block text-[length:calc(var(--u)*12)] text-[#4b5c78]"
+                    >
+                      {new Date(notificacion.creadoEn).toLocaleString()}
+                    </time>
+                  </span>
+                  {!notificacion.leida && (
+                    <span className="shrink-0 rounded-full bg-[#079f9e] px-[calc(var(--u)*12)] py-[calc(var(--u)*4)] text-[length:calc(var(--u)*13)] font-bold text-white">
+                      Nueva
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   );

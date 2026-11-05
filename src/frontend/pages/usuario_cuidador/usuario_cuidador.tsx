@@ -15,9 +15,9 @@ const URL_BASE = "http://localhost:3000";
 const URL_PERFIL = `${URL_BASE}/doctor/verPerfilDoctor`;
 const URL_MIS_PACIENTES = `${URL_BASE}/doctor/verPacientesDoctor`;
 const URL_ENVIAR_INVITACION_DOCTOR = `${URL_BASE}/doctor/enviarInvitacionDoctor`;
-const URL_ENVIAR_INVITACION_ACOMPANANTE = `${URL_BASE}/acompañante/enviarInvitacionAcompañante`;
+const URL_ENVIAR_INVITACION_ACOMPANANTE = `${URL_BASE}/acompanante/enviarInvitacionAcompanante`;
 const URL_CAMBIAR_CORREO_DOCTOR = `${URL_BASE}/doctor/cambiarCorreo`;
-const URL_CAMBIAR_CORREO_ACOMPANANTE = `${URL_BASE}/acompañante/cambiarCorreo`;
+const URL_CAMBIAR_CORREO_ACOMPANANTE = `${URL_BASE}/acompanante/cambiarCorreo`;
 const URL_ELIMINAR_PACIENTE = `${URL_BASE}/doctor/eliminarPacienteVinculado`;
 const URL_SUBIR_FOTO = `${URL_BASE}/videos/subirFotoPerfil`;
 
@@ -347,6 +347,9 @@ export default function PerfilCuidador(rol: { rol: string }) {
               {/* Formulario Agregar Paciente por ID */}
               {panel === "agregar" && (
                 <form onSubmit={agregarPaciente} className="mt-[calc(var(--u)*16)] flex w-full flex-col gap-[calc(var(--u)*12)]">
+                  <p className="text-[length:calc(var(--u)*16)] text-[#18243b]">
+                    Pedile al paciente el ID que aparece en su perfil.
+                  </p>
                   <input
                     type="number"
                     aria-label="ID del paciente a invitar"

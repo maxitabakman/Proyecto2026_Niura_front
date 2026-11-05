@@ -1,109 +1,164 @@
-import { useState } from "react";
-import arrowback from './flecha.png'; 
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import arrowback from './flecha.png';
 import iconoExito from './exito.png';
 import iconoError from './error.png';
 import btnVolverAzul from './btn-volver-azul.png';
 import btnVolver from './btn-volver.png';
 import btnReintentar from './btn-reintentar.png';
 import confirmar from '../confirmarSeleccionEjercicio/btn-confirmar.png';
-import './seleccionarArchivoAudio.css'; 
-import { useNavigate } from "react-router-dom";
+import '../seleccionVIDEO/seleccionarArchivo.css';
+import './seleccionarArchivoAudio.css';
 
 type EstadoPantalla = 'seleccion' | 'exito' | 'error';
+const MAX_TAMANO_AUDIO = 100 * 1024 * 1024;
 
-export default function SubirArchivo() {
-    const [nombreArchivo, setNombreArchivo] = useState<string>("Seleccionar archivo...");
-    const [videoPrevisualizado, setVideoPrevisualizado] = useState<string | null>(null);
-    const [archivo, setArchivo] = useState<File | null | undefined>(null);
-    console.log (archivo)
-    const [estado, setEstado] = useState<EstadoPantalla>('seleccion');
+export default function SubirArchivoAudio() {
+    const { id, type } = useParams<{ id: string; type: string }>();
     const navigate = useNavigate();
+    const [archivo, setArchivo] = useState<File | null>(null);
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [estado, setEstado] = useState<EstadoPantalla>('seleccion');
+    const [cargando, setCargando] = useState(false);
+    const [error, setError] = useState('');
 
-    const handleSeleccionarArchivo = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setArchivo(file);
-            setNombreArchivo(file.name); 
-            const videoUrl = URL.createObjectURL(file);
-            setVideoPrevisualizado(videoUrl);
+    useEffect(() => {
+        return () => {
+            if (audioUrl) URL.revokeObjectURL(audioUrl);
+        };
+    }, [audioUrl]);
+
+    const handleSeleccionarArchivo = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0] ?? null;
+        if (!file) return;
+        if (!file.type.startsWith('audio/') || file.size > MAX_TAMANO_AUDIO) {
+            setArchivo(null);
+            setAudioUrl(null);
+            setError('Elegí un archivo de audio de hasta 100 MB.');
+            return;
+        }
+        setArchivo(file);
+        setAudioUrl(URL.createObjectURL(file));
+        setError('');
+    };
+
+    const handleConfirmar = async () => {
+        if (!archivo) {
+            setError('Seleccioná un archivo de audio antes de confirmar.');
+            return;
+        }
+        if (!id || type !== 'audio') {
+            setError('No se encontró una tarea de audio válida.');
+            return;
+        }
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setError('Tu sesión venció. Volvé a iniciar sesión.');
+            return;
+        }
+
+        setCargando(true);
+        setError('');
+        try {
+            const formData = new FormData();
+            formData.append('audio', archivo);
+            formData.append('tareaID', id);
+
+            const response = await fetch('http://localhost:3000/videos/subirAudioPaciente', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData,
+            });
+            const data: { message?: string } = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || `El servidor respondió ${response.status}.`);
+            }
+            setEstado('exito');
+        } catch (fallo) {
+            console.error('Error al subir el audio:', fallo);
+            setError(
+                fallo instanceof Error ? fallo.message : 'No se pudo subir el audio.',
+            );
+            setEstado('error');
+        } finally {
+            setCargando(false);
         }
     };
 
-    const handleNavigateBack = () => {
-        navigate(-1);
-    };
-
-    const handleVolverInicio = () => {
-        navigate('../paciente/ejercitar'); 
-    };
-
-    const handleReintentar = () => {
-        setEstado('seleccion');
-    };
-
-    const handleConfirmar = () => {
-        setTimeout(() => {
-            const subidaExitosa = Math.random() > 0.5;
-            if (subidaExitosa) {
-                setEstado('exito');
-            } else {
-                setEstado('error');
-            }
-        }, 1000);
-    };
+    const volverAlInicio = () => navigate('/paciente/ejercitar');
 
     return (
         <div className="pantalla-subida-contenedor">
             <div className={`card-confirmacion ${estado === 'error' ? 'card-error' : ''}`}>
-                
-                <button className="boton-volver" onClick={handleNavigateBack}>
-                    <img src={arrowback} alt="Volver" className="atras" />
+                <button
+                    type="button"
+                    className="boton-volver"
+                    onClick={() => navigate(-1)}
+                    disabled={cargando}
+                    aria-label="Volver"
+                >
+                    <img src={arrowback} alt="" className="atras" />
                 </button>
 
                 {estado === 'seleccion' && (
                     <>
-                        <h2 className="titulo-confirmacion">¿Subir archivo seleccionado?</h2>
-                        <label htmlFor="input-archivo" className="etiqueta-nombre-archivo">
-                            {nombreArchivo}
+                        <h2 className="titulo-confirmacion">
+                            {cargando ? 'Subiendo audio...' : 'Seleccioná el audio del ejercicio'}
+                        </h2>
+                        <label htmlFor="input-audio" className="etiqueta-nombre-archivo">
+                            {archivo?.name || 'Seleccionar archivo de audio'}
                         </label>
-                        <input 
-                            id="input-archivo"
-                            type="file" 
-                            accept="video/*" 
-                            onChange={handleSeleccionarArchivo} 
+                        <input
+                            id="input-audio"
+                            type="file"
+                            accept="audio/*"
+                            onChange={handleSeleccionarArchivo}
                             className="input-oculto"
+                            disabled={cargando}
                         />
-                        {videoPrevisualizado && (
-                            <video className="video-preview" controls src={videoPrevisualizado} />
-                        )}
-                        <img 
-                            src={confirmar} 
-                            alt="Confirmar" 
-                            className="confirmar" 
-                            onClick={handleConfirmar} 
-                        />
+                        {audioUrl && <audio className="video-preview" controls src={audioUrl} />}
+                        {error && <p role="alert" className="text-red-800">{error}</p>}
+                        <button
+                            type="button"
+                            className="boton-principal"
+                            onClick={() => void handleConfirmar()}
+                            disabled={cargando || !archivo}
+                            aria-label="Subir audio"
+                        >
+                            <img src={confirmar} alt="" />
+                        </button>
                     </>
                 )}
 
                 {estado === 'exito' && (
                     <>
-                        <h2 className="titulo-confirmacion">Video subido con éxito</h2>
+                        <h2 className="titulo-confirmacion">Audio subido con éxito</h2>
                         <img src={iconoExito} alt="Éxito" className="icono-estado" />
-                        <img className="boton-principal" src={btnVolverAzul} alt="Volver al inicio" onClick={handleVolverInicio} />
+                        <button type="button" className="boton-principal" onClick={volverAlInicio}>
+                            <img src={btnVolverAzul} alt="Volver al inicio" />
+                        </button>
                     </>
                 )}
 
                 {estado === 'error' && (
                     <>
-                        <h2 className="titulo-confirmacion">Hubo un error</h2>
+                        <h2 className="titulo-confirmacion">No pudimos subir el audio</h2>
+                        <p role="alert">{error}</p>
                         <img src={iconoError} alt="Error" className="icono-estado" />
                         <div className="contenedor-botones-error">
-                            <img className="boton-principal" src={btnReintentar} alt="Reintentar" onClick={handleReintentar} />
-                            <img className="boton-secundario" src={btnVolver} alt="Volver al inicio" onClick={handleVolverInicio} />
+                            <button
+                                type="button"
+                                className="boton-principal"
+                                onClick={() => setEstado('seleccion')}
+                            >
+                                <img src={btnReintentar} alt="Reintentar" />
+                            </button>
+                            <button type="button" className="boton-secundario" onClick={volverAlInicio}>
+                                <img src={btnVolver} alt="Volver al inicio" />
+                            </button>
                         </div>
                     </>
                 )}
-
             </div>
         </div>
     );
