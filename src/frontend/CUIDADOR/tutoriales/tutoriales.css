@@ -1,0 +1,204 @@
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+* {
+    box-sizing: border-box;
+    font-family: 'Atkinson Hyperlegible', sans-serif !important;
+}
+
+/* Contenedor fondo: Asegura que la tarjeta no toque los bordes de la pantalla */
+.contenedor-fondo-tutoriales {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    padding: 40px 20px;
+    width: 100%;
+}
+
+/* Tarjeta principal: Controlamos el ancho y le damos posición relativa para el botón de volver */
+.tutoriales-tarjeta-principal {
+    position: relative;
+    background-color: #92c9cd;
+    width: 95%; /* Deja un margen a los lados en pantallas chicas */
+    max-width: 1050px; /* Tope máximo de ancho */
+    min-height: 500px;
+    border-radius: 12px;
+    padding: 50px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* ================= HEADER Y BUSCADOR ================= */
+
+.cabecera-tutoriales {
+    width: 100%;
+    display: flex;
+    justify-content: center; /* Centra el título */
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+/* Botón anclado de forma segura a la esquina superior izquierda de la tarjeta */
+.btn-volver-tutoriales {
+    position: absolute;
+    left: 40px;
+    top: 50px; /* Alineado verticalmente con el título */
+    width: 55px;
+    height: 55px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.2s;
+    padding: 0;
+}
+
+.btn-volver-tutoriales img {
+    width: 55px;
+    height: auto;
+}
+
+.btn-volver-tutoriales:hover {
+    transform: scale(1.1);
+}
+
+.titulo-tutoriales {
+    font-size: 38px;
+    font-weight: 700;
+    color: #18243A;
+    margin: 0;
+    text-align: center;
+}
+
+.input-busqueda-tutoriales {
+    position: relative;
+    width: 100%;
+    max-width: 550px;
+    margin-bottom: 40px;
+}
+
+.input-busqueda-tutoriales input {
+    width: 100%;
+    padding: 14px 50px 14px 25px;
+    border-radius: 30px;
+    border: none;
+    background-color: #e4dfda;
+    font-size: 18px;
+    color: #555;
+    outline: none;
+    box-shadow: inset 0px 2px 5px rgba(0,0,0,0.1);
+}
+
+.input-busqueda-tutoriales input::placeholder {
+    color: #999;
+}
+
+.search-icon-tutoriales {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    opacity: 0.6;
+}
+
+/* ================= CARRUSEL Y GRILLA ================= */
+
+/* Contenedor flex horizontal: Flecha - Grilla - Flecha */
+.carrusel-tutoriales {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px; /* Espacio entre las flechas y las tarjetas */
+    width: 100%;
+    margin-bottom: 25px; /* Separación con los puntitos */
+}
+
+/* Flechas */
+.arrow-carrusel {
+    width: 35px;
+    cursor: pointer;
+    flex-shrink: 0; /* Evita que las flechas se aplasten */
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.arrow-backward {
+    transform: scaleX(-1);
+}
+
+.arrow-backward:hover:not(.disabled) {
+    transform: scaleX(-1) scale(1.1);
+}
+
+.arrow-forward:hover:not(.disabled) {
+    transform: scale(1.1);
+}
+
+.arrow-carrusel.disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.grilla-tutoriales {
+    display: flex;
+    gap: 20px; /* Separación entre tarjetas */
+    justify-content: center;
+}
+
+/* Tarjetas - Se redujo la altura para que no queden tan vacías */
+.tutorial-card {
+    background: linear-gradient(180deg, #eef3f7 0%, #c3d5e2 100%);
+    width: 190px;
+    height: 240px; /* Altura ajustada */
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Distribuye el título arriba y el botón abajo */
+    align-items: center;
+    padding: 30px 15px; /* Espaciado interno */
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.15);
+}
+
+.tutorial-card h2 {
+    font-size: 22px;
+    font-weight: 400;
+    color: #18243A;
+    margin: 0;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.btn-tutorial-img {
+    width: 130px;
+    cursor: pointer;
+    transition: transform 0.2s, filter 0.2s;
+    border-radius: 8px;
+}
+
+.btn-tutorial-img:hover {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+}
+
+/* ================= INDICADORES ================= */
+
+.indicadores-carrusel {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.punto {
+    width: 14px;
+    height: 14px;
+    background-color: #d1d5db;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.punto-activo {
+    background-color: #6b7280;
+}
