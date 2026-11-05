@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import PatientCard from '../components/patientCard';
 import { useMedico, type Paciente } from '../Contexts/contextoMedico';
 
-const URL_PACIENTES = 'https://mocki.io/v1/9082de34-f8cf-43f6-a0ea-8567192e60da';
+const URL_PACIENTES = 'https://mocki.io/v1/4fa7ffcd-f9b9-4eef-90b9-0ada02a90461';
 
 const PACIENTES_POR_PAGINA = 7;
 

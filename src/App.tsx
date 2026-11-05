@@ -94,9 +94,9 @@ function App() {
                   <Route path="/medico/perfil" element={<PerfilCuidador />} />
                   <Route path="/medico/reddecontactosmia" element={<ChatSimplificadomiopaciente usuario_id={2} />} />
                   <Route path="/pendientesmedico" element={<AsignarEjercicio />} />
-                  <Route path="/crearEjercicio" element={<CrearEjercicio />} />
-                  <Route path="/asignarEjercicio" element={<AsignarEjercicio />} />
-                  <Route path="/quieresAsignar" element={<QuieresAsignarlo />} />
+                  <Route path="/medico/crearEjercicio/:pacienteId" element={<CrearEjercicio />} />
+                  <Route path="/medico/asignarEjercicio/:pacienteId" element={<AsignarEjercicio />} />
+                  <Route path="/medico/quieresAsignar/:pacienteId/:ejercicioId" element={<QuieresAsignarlo />} />
 
                   {/* Rutas de Paciente */}
                   <Route path ="/paciente/seleccionAUDIO" element={<SeleccionAudio />} />
