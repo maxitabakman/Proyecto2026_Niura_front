@@ -11,7 +11,7 @@ export default function QuieresAsignarlo() {
     const navigate = useNavigate();
 
     const volverAlInicio = () => {
-        navigate('/medico/paginaGeneralMedico');
+        navigate('/medico/pacient');
     };
 
     const handleConfirmar = async () => {
