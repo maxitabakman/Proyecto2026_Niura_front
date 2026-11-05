@@ -14,6 +14,7 @@ import Elegirinicio from './frontend/pages/eleccion_de_usuario/elegirinicio';
 // IMPORTS - MÉDICO
 import AsignarEjercicio from './frontend/MEDICO/asignarEjercicio/tsx/asignarEjercicio';
 import CrearEjercicio from './frontend/MEDICO/asignarEjercicio/tsx/crearEjercicio';
+import QuieresAsignarlo from './frontend/MEDICO/asignarEjercicio/tsx/quieresAsignarlo';
 import Pacientes from './frontend/pages/Pacientes';
 import DetallePaciente from './frontend/pages/DetallePaciente';
 import Historial from './frontend/pages/historial/historial';
@@ -38,7 +39,6 @@ import PerfilCuidador from './frontend/pages/usuario_cuidador/usuario_cuidador';
 import Noticias from './frontend/pages/notificaciones/notificaciones_cuidador';
 import NoticiasPaciente from './frontend/pages/notificaciones/notificaciones';
 import BotonNotificacion from './frontend/pages/notificaciones/notificaciones';
-import NotificacionesMedico from './frontend/pages/notificaciones/notificaciones_medico';
 import ListaRacha  from './frontend/racha/racha';
 import Header from './frontend/components/header';
 import PaginaGeneral from './frontend/pages/paginageneral/paginageneral';
@@ -92,12 +92,13 @@ function App() {
                   <Route path="/medico/pacient/:id" element={<DetallePaciente />} />
                   <Route path="/medico/pacient/:id/historial" element={<Historial />} />
                   <Route path="/medico/pacient/:id/progreso" element={<Progresopaciente />} />
-                  <Route path="/medico/noticias" element={<NotificacionesMedico />} />
+                  <Route path="/medico/noticias" element={<Noticias />} />
                   <Route path="/medico/perfil" element={<PerfilCuidador rol ={"Médico"} />} />
                   <Route path="/medico/reddecontactosmia" element={<ChatSimplificadomiopaciente usuario_id={usuarioId} />} />
                   <Route path="/pendientesmedico" element={<AsignarEjercicio />} />
                   <Route path="/medico/crearEjercicio/:pacienteId" element={<CrearEjercicio />} />
                   <Route path="/medico/asignarEjercicio/:pacienteId" element={<AsignarEjercicio />} />
+                  <Route path="/medico/quieresAsignar/:pacienteId/:ejercicioId" element={<QuieresAsignarlo />} />
 
                   {/* Rutas de Paciente */}
                   <Route path ="/paciente/seleccionAUDIO" element={<SeleccionAudio />} />
@@ -121,6 +122,7 @@ function App() {
 
                   {/* Rutas de Cuidador */}
                   <Route path="/cuidador/perfil" element={<PerfilCuidador rol ={ "Cuidador" } />} />
+                  <Route path="/cuidador/noticias" element={<Noticias />} />
                   <Route path="/cuidador/noticias" element={<Noticias />} />
                   <Route path="/cuidador/reddecontactosmia" element={<ChatSimplificadomiopaciente usuario_id={usuarioId} />} />
                   <Route path="/cuidador/paginagralcuidador" element={<PaginaGralCuidador />} />

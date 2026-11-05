@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useMedico } from '../../../Contexts/contextoMedico';
 import type { Ejercicios } from '../../../PACIENTE/seleccionEjercicio/seleccionDeEjercicios';
@@ -6,70 +6,83 @@ import flecha from '../../../PACIENTE/seleccionVIDEO/flecha.png';
 import flechaSiguiente from '../../../PACIENTE/seleccionEjercicio/arrowback.png';
 import lupa from '../img/boxicons_search-alt.png';
 import '../css/asignarEjercicio.css';
-import botonCrear from '../img/btn-crea.png';
+import botonCrear from '../img/btn-crea.png'
 
 export default function AsignarEjercicio() {
     const [ejercicios, setEjercicios] = useState<Ejercicios[]>([]);
     const [busqueda, setBusqueda] = useState('');
     const [paginaActual, setPaginaActual] = useState(0);
-    const [cargando, setCargando] = useState(Boolean(localStorage.getItem('token')));
-    const [error, setError] = useState(
-        localStorage.getItem('token') ? '' : 'Iniciá sesión para ver las tareas.',
-    );
     const elementosPorPagina = 4;
-
+    
     const navigate = useNavigate();
     const { pacienteId: pacienteIdRuta } = useParams<{ pacienteId: string }>();
     const { pacienteActivo } = useMedico();
     const pacienteId = pacienteIdRuta ?? pacienteActivo?.id;
-    const token = localStorage.getItem('token');
 
+    // Guarda el ID del paciente en localStorage para las pantallas de creación/asignación
     useEffect(() => {
-        if (!pacienteId || !token) return;
-        const idPaciente = pacienteId;
-
-        const controller = new AbortController();
-        async function cargarTareas() {
-            try {
-                const response = await fetch(
-                    `http://localhost:3000/doctor/verTareas?idPaciente=${encodeURIComponent(idPaciente)}`,
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                        signal: controller.signal,
-                    },
-                );
-                const data: { message?: string; tareas?: Ejercicios[] } = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.message || `El servidor respondió ${response.status}.`);
-                }
-                if (!Array.isArray(data.tareas)) {
-                    throw new Error('El servidor devolvió una lista de tareas inválida.');
-                }
-                setEjercicios(data.tareas);
-                setError('');
-            } catch (fallo) {
-                if (controller.signal.aborted) return;
-                console.error('Error al consultar las tareas:', fallo);
-                setError(fallo instanceof Error ? fallo.message : 'No se pudieron cargar las tareas.');
-            } finally {
-                if (!controller.signal.aborted) setCargando(false);
-            }
+        if (pacienteId) {
+            localStorage.setItem('pacienteSeleccionadoId', String(pacienteId));
         }
-        void cargarTareas();
-        return () => controller.abort();
-    }, [pacienteId, token]);
+    }, [pacienteId]);
 
-    const ejerciciosFiltrados = ejercicios.filter((ejercicio) =>
-        ejercicio.nombre.toLowerCase().includes(busqueda.toLowerCase()),
+    // Petición al backend con idPaciente obligatorio en la URL
+    useEffect(() => {
+        if (!pacienteId) return;
+
+        const token = localStorage.getItem('token');
+
+        fetch(`http://localhost:3000/doctor/verTareas?idPaciente=${pacienteId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(async (res) => {
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.message || 'Error al obtener los ejercicios');
+                }
+                return data;
+            })
+            .then((data) => {
+                const lista = Array.isArray(data.tareas) ? data.tareas : [];
+                setEjercicios(lista);
+            })
+            .catch((err) => {
+                console.error(`Error al consultar tareas: ${err.message}`);
+                setEjercicios([]);
+            });
+            
+    }, [pacienteId]);
+
+    const listaSegura = Array.isArray(ejercicios) ? ejercicios : [];
+
+    const ejerciciosFiltrados = listaSegura.filter(ejercicio => 
+        ejercicio?.nombre?.toLowerCase().includes(busqueda.toLowerCase())
     );
+
     const totalPaginas = Math.ceil(ejerciciosFiltrados.length / elementosPorPagina);
-    const tareasPaginadas = ejerciciosFiltrados.slice(
-        paginaActual * elementosPorPagina,
-        (paginaActual + 1) * elementosPorPagina,
+
+    const carruselElementos = ejerciciosFiltrados.slice(
+        paginaActual * elementosPorPagina, 
+        (paginaActual + 1) * elementosPorPagina
     );
+
+    const handleNavigateCarruselPaginaAnterior = () => {
+        if (paginaActual > 0) setPaginaActual(paginaActual - 1);
+    };
+
+    const handleNavigateCarruselPaginaSiguiente = () => {
+        if (paginaActual < totalPaginas - 1) setPaginaActual(paginaActual + 1);
+    };
+
+    const handleNavigate = (id: number | string) => {
+        navigate(`/medico/quieresAsignar/${pacienteId}/${id}`);
+    };
 
     const handleNavigateCrearEjercicio = () => {
-        if (pacienteId) navigate(`/medico/crearEjercicio/${pacienteId}`);
+        navigate(`/medico/crearEjercicio/${pacienteId}`);
     };
 
     if (!pacienteId) {
@@ -79,72 +92,65 @@ export default function AsignarEjercicio() {
     return (
         <div className="contenedor-fondo-medico">
             <div className="tarjeta-principal-medico">
+                
                 <div className="cabecera-medico">
-                    <button type="button" className="btn-volver" onClick={() => navigate(-1)}>
+                    <button className="btn-volver" onClick={() => navigate(-1)}>
                         <img src={flecha} alt="Volver" />
                     </button>
-                    <h1 className="titulo-medico">Tareas asignadas al paciente</h1>
+                    <h1 className="titulo-medico">Asigna un nuevo ejercicio</h1>
                 </div>
 
                 <div className="contenedor-buscador">
-                    <input
-                        type="text"
-                        className="input-buscador"
-                        placeholder="Buscar tarea"
+                    <input 
+                        type="text" 
+                        className="input-buscador" 
+                        placeholder="ingresa el nombre" 
                         value={busqueda}
                         onChange={(e) => {
                             setBusqueda(e.target.value);
                             setPaginaActual(0);
                         }}
                     />
-                    <img src={lupa} alt="" className="icono-lupa" />
+                    <img src={lupa} alt="Buscar" className="icono-lupa" />
                 </div>
 
                 <div className="carrusel-contenedor">
-                    <button
-                        type="button"
-                        className="btn-flecha"
-                        onClick={() => setPaginaActual((pagina) => Math.max(0, pagina - 1))}
+                    <button 
+                        className="btn-flecha" 
+                        onClick={handleNavigateCarruselPaginaAnterior} 
                         disabled={paginaActual === 0}
-                        aria-label="Página anterior"
                     >
-                        <img src={flechaSiguiente} alt="" className="icono-flecha" />
+                        <img src={flechaSiguiente} alt="flechaCarrusel" className="icono-flecha" />
                     </button>
 
                     <div className="grilla-ejercicios">
-                        {cargando ? (
-                            <p role="status" style={{ gridColumn: '1 / -1' }}>Cargando tareas...</p>
-                        ) : error ? (
-                            <p role="alert" style={{ gridColumn: '1 / -1' }}>{error}</p>
-                        ) : tareasPaginadas.length === 0 ? (
+                        {carruselElementos.length === 0 ? (
                             <p style={{ textAlign: 'center', color: '#666', gridColumn: '1 / -1' }}>
-                                Este paciente todavía no tiene tareas asignadas.
+                                No se encontraron ejercicios asignados a este paciente.
                             </p>
                         ) : (
-                            tareasPaginadas.map((tarea) => (
-                                <div key={tarea.id} className="CardPendiente">
-                                    <h3 className="titulo-ejercicio">{tarea.nombre}</h3>
-                                    <p>{tarea.descripcion}</p>
-                                    <p>Tipo: {tarea.tipo || 'video'}</p>
-                                    <p>Estado: {Number(tarea.estado) === 1 ? 'Completada' : 'Pendiente'}</p>
+                            carruselElementos.map((ejercicio) => (
+                                <div key={ejercicio.id} className="CardPendiente">
+                                    <h3 className="titulo-ejercicio">{ejercicio.nombre}</h3>
+                                    <button className="botonAsignar" onClick={() => handleNavigate(ejercicio.id)}>
+                                        Asignar
+                                    </button>
                                 </div>
                             ))
                         )}
                     </div>
 
-                    <button
-                        type="button"
-                        className="btn-flecha"
-                        onClick={() => setPaginaActual((pagina) => Math.min(totalPaginas - 1, pagina + 1))}
+                    <button 
+                        className="btn-flecha" 
+                        onClick={handleNavigateCarruselPaginaSiguiente} 
                         disabled={paginaActual >= totalPaginas - 1 || totalPaginas === 0}
-                        aria-label="Página siguiente"
                     >
-                        <img src={flechaSiguiente} alt="" className="icono-flecha" />
+                        <img src={flechaSiguiente} alt="flechaCarrusel" className="icono-flecha" />
                     </button>
                 </div>
 
                 <button className="CrearEjercicio" onClick={handleNavigateCrearEjercicio}>
-                    <img src={botonCrear} alt="Crear tarea" className="icono-crear" />
+                    <img src={botonCrear} alt="Crear Ejercicio" className="icono-crear" />
                 </button>
             </div>
         </div>
