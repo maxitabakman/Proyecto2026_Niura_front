@@ -46,7 +46,7 @@ import PaginaGralCuidador from './frontend/CUIDADOR/paginagralCuidador/paginagra
 import Guia from './frontend/CUIDADOR/guia/guia';
 import HabilitarEjercicios from './frontend/CUIDADOR/habilitarEjercicios/habilitarEjercicios';
 import Tutoriales from './frontend/CUIDADOR/tutoriales/tutoriales';
-import PaginaTutoriales from './frontend/CUIDADOR/paginaTutorial/paginaTutorial';
+import PaginaTutoriales from './frontend/CUIDADOR/paginaTutorial/paginaTutorial.tsx';
 import SubirFotoElemento from './frontend/CUIDADOR/elemento/elemento';
 
 // IMPORTS - RED DE CONTACTOS Y CHAT
