@@ -4,12 +4,27 @@ import arrowback from './arrowback.png';
 import './seleccionDeEjercicios.css';
 import flecha from '../EleccionEjercicio/flecha.png'
 
+export type Elemento = {
+    id: number | string;
+    nombre: string;
+    descripcion: string;
+}
+
+export type Tutorial = {
+    id: number | string;
+    nombre: string;
+    imagen: string;
+    descripcion: string;
+}
+
 export type Ejercicios = {
     id: number | string;
     nombre: string;
     descripcion: string;
     type: string;
+    tutorial: Tutorial;
     imagen: string;
+    elemento: Elemento;
 }
 
 export default function SeleccionDeEjercicios() {
