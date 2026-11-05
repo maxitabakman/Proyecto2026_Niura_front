@@ -1,0 +1,167 @@
+/* Contenedor principal transparente para evitar el cuadrado de fondo extra */
+.main-container-asignar {
+    width: 100%;
+    min-height: 80vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: transparent;
+    padding: 40px 0;
+}
+
+/* Tarjeta Principal */
+.quieresAsignarlo,
+.exitoso,
+.noExitoso {
+    background-color: #9cd0d8;
+    width: 900px;
+    max-width: 90%;
+    border-radius: 12px;
+    padding: 50px 80px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    min-height: 450px;
+    justify-content: space-between;
+}
+
+/* Botón de volver (círculo esquina superior izquierda) */
+.btn-volver-asignar {
+    position: absolute;
+    top: 40px;
+    left: 45px;
+    cursor: pointer;
+    width: 55px; 
+    height: 55px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    transition: transform 0.2s ease;
+}
+
+.btn-volver-asignar img {
+    width: 55px;
+    height: 55px;
+    object-fit: contain;
+}
+
+.btn-volver-asignar:hover {
+    transform: scale(1.1);
+}
+
+/* Título */
+.quieresAsignarlo h1,
+.exitoso h1,
+.noExitoso h1 {
+    color: #112331;
+    font-size: 2.2rem;
+    font-weight: 800;
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+/* Cuadro gris central del Ejercicio */
+.ejercicio-card {
+    background: linear-gradient(180deg, #eef2f6 0%, #c3ccd5 100%);
+    width: 160px;
+    height: 220px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    margin-bottom: 30px;
+    /* Efecto para que no parezca un botón plano */
+    border-top: 1px solid #ffffff; 
+}
+
+.ejercicio-card p {
+    color: #2b3a4a;
+    font-size: 1.3rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* Botón de Confirmar (Transparente para que la imagen png haga el trabajo) */
+.botonConfirmarImg {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.2s ease;
+}
+
+.botonConfirmarImg:hover {
+    transform: translateY(-3px);
+}
+
+.botonConfirmarImg:active {
+    transform: scale(0.98);
+}
+
+.botonConfirmarImg:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Imagen dentro del botón de confirmar */
+.confirm-icon-img {
+    width: 220px;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Texto de "Asignando..." por si tarda la petición */
+.texto-cargando {
+    background-color: #0b8dd8;
+    color: white;
+    padding: 14px 60px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Estados de Éxito / Error --- */
+.asignadoCorrectamente,
+.noAsignado {
+    margin-bottom: 10px !important;
+}
+
+.habilitado,
+.vuelveAIntentar {
+    color: #223344;
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+}
+
+.imagenConfirmar,
+.imagenError {
+    width: 120px;
+    height: auto;
+    margin-bottom: 40px;
+}
+
+.botonVolverInicio {
+    background-color: #0b8dd8;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 45px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease;
+}
+
+.botonVolverInicio:hover {
+    transform: translateY(-2px);
+    background-color: #097bbc;
+}

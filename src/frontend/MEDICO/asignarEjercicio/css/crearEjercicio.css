@@ -1,29 +1,62 @@
-/* Contenedor principal centrado */
+/* 1. Contenedor principal: transparente para borrar el cuadrado de fondo */
 .main-container {
     width: 100%;
+    min-height: 80vh; /* Permite que ocupe el alto disponible sin crear fondos extra */
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px 0;
+    background-color: transparent; 
+    padding: 40px 0;
 }
 
-/* Tarjeta flotante central */
+/* 2. Tarjeta principal: Más ancha y proporcionada como en la imagen 2 */
 .card-container {
-    background-color: #88c7d1;
-    width: 100%;
-    max-width: 650px;
-    border-radius: 16px;
-    padding: 40px 50px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    background-color: #9cd0d8;
+    width: 900px; /* Aumentamos el ancho */
+    max-width: 90%;
+    border-radius: 12px;
+    padding: 50px 80px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    position: relative; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-/* Título de la tarjeta */
+/* Botón de volver (esquina superior izquierda con círculo) */
+.btn-volver-crear {
+    position: absolute;
+    top: 40px;
+    left: 45px;
+    cursor: pointer;
+    width: 55px; 
+    height: 55px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    transition: transform 0.2s ease;
+}
+
+.btn-volver-crear img, 
+.btn-volver-crear svg {
+    width: 55px;
+    height: 55px;
+    object-fit: contain;
+}
+
+.btn-volver-crear:hover {
+    transform: scale(1.1);
+}
+
+/* Título centrado y más grande */
 .form-title {
     color: #112331;
     font-size: 2.2rem;
     font-weight: 800;
     text-align: center;
-    margin-bottom: 30px;
+    margin-top: 0;
+    margin-bottom: 35px;
 }
 
 /* Formulario */
@@ -31,53 +64,52 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    width: 100%;
+    gap: 18px;
 }
 
-/* Estilos de los inputs */
+/* Inputs alargados y centrados */
 .form-input {
-    width: 100%;
-    background-color: #dcdcdc;
-    border: 1px solid #cecece;
-    border-radius: 12px;
-    padding: 12px 20px;
-    font-size: 0.95rem;
+    width: 85%; /* No ocupan el 100% para dejar margen interno */
+    background-color: #e4e2df; /* Gris claro de tu diseño */
+    border: none;
+    border-radius: 8px;
+    padding: 14px 20px;
+    font-size: 1rem;
     text-align: center;
     color: #333333;
     outline: none;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 .form-input::placeholder {
     color: #777777;
 }
 
-.form-input:focus {
-    border-color: #a0a0a0;
-}
-
-/* Botón de video personalizado */
+/* Contenedor del botón de video alineado con los inputs */
 .file-upload-wrapper {
-    width: 100%;
+    width: 85%;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    margin-top: 4px;
+    margin-top: 5px;
 }
 
+/* Botón de subir video (Forma rectangular, no cuadrada) */
 .file-upload-btn {
-    background-color: #dcdcdc;
-    border: 1px solid #cecece;
-    border-radius: 12px;
-    padding: 14px 24px;
+    background-color: #e4e2df;
+    border: none;
+    border-radius: 8px;
+    padding: 15px 25px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    gap: 15px;
     cursor: pointer;
-    width: 220px;
+    width: 300px;
     color: #555555;
-    font-size: 0.9rem;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    font-size: 0.95rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     transition: background-color 0.2s;
 }
 
@@ -85,31 +117,38 @@
     background-color: #d2d2d2;
 }
 
+/* Evita que la flecha de subida se haga gigante */
 .upload-icon {
-    width: 18px;
-    height: 18px;
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px;
     stroke: #555555;
 }
 
 /* Iconos flotantes bajo el botón de video */
 .media-quick-icons {
     display: flex;
-    gap: 8px;
-    margin-top: 8px;
-    margin-left: 45px;
+    gap: 12px;
+    margin-top: 15px;
+    margin-left: 65px; /* Alineado visualmente al centro del botón */
 }
 
 .quick-icon-btn {
-    width: 32px;
+    width: 38px;
     height: 32px;
-    background: linear-gradient(180deg, #71b8c4, #4e9ca9);
+    background: linear-gradient(180deg, #7db3cc 0%, #4b8ba6 100%); /* Tonos azules de la imagen */
     border-radius: 6px;
     display: flex;
     justify-content: center;
     align-items: center;
-    color: #ffffff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    color: #112331;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
     cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.quick-icon-btn:hover {
+    transform: translateY(-2px);
 }
 
 .quick-icon-btn svg {
@@ -119,23 +158,30 @@
 
 /* Botón de Confirmar */
 .confirm-btn {
-    background-color: #0088dd;
-    color: #ffffff;
+    background: transparent;
     border: none;
-    border-radius: 12px;
-    padding: 10px 48px;
-    font-size: 1.1rem;
-    font-weight: 500;
+    padding: 0;
     cursor: pointer;
-    margin-top: 15px;
-    box-shadow: 0 4px 8px rgba(0, 136, 221, 0.3);
-    transition: background-color 0.2s, transform 0.1s;
+    margin-top: 35px;
+    box-shadow: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.2s ease;
 }
 
 .confirm-btn:hover {
-    background-color: #0077c5;
+    transform: translateY(-3px);
 }
 
-.confirm-btn:active {
-    transform: scale(0.98);
+.confirm-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Ajuste de la imagen del botón Confirmar */
+.confirm-icon {
+    width: 220px; 
+    height: auto;
+    object-fit: contain;
 }
