@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import confirmar from '../img/btn-confirmar (1).png'
+import arrowback from '../img/arrowback (1).png'
 
 import '../css/crearEjercicio.css';
 
-export default function Asignar() {
+export default function CrearEjercicio() {
     const [ nombre, setNombre ] = useState<string>('');
     const [ descripcion, setDescripcion ] = useState<string>('');
     const [ elementos, setElementos ] = useState<string>('');
@@ -19,55 +21,55 @@ export default function Asignar() {
     };
 
     const handleCrearEjercicio = async (e: React.FormEvent) => {
-    e.preventDefault();
+        e.preventDefault();
 
-    if (!nombre.trim() || !descripcion.trim()) {
-        alert('Por favor, completa el nombre y la descripción');
-        return;
-    }
-
-    if (!pacienteId) {
-        navigate('/medico/pacient');
-        return;
-    }
-
-    setCargando(true);
-    const token = localStorage.getItem('token');
-
-    const formData = new FormData();
-    formData.append('nombre', nombre);
-    formData.append('descripcion', descripcion);
-    formData.append('elementos', elementos);
-
-    formData.append('idPaciente', pacienteId);
-
-    if (video) {
-        formData.append('video', video);
-    }
-
-    try {
-        const res = await fetch('http://localhost:3000/doctor/crearTarea', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-                // NOTA: Con FormData NO se pone 'Content-Type', el navegador lo coloca automáticamente
-            },
-            body: formData
-        });
-
-        if (res.ok) {
-            navigate(`/medico/asignarEjercicio/${pacienteId}`);
-        } else {
-            const data = await res.json();
-            alert(data.message || "Error al crear el ejercicio en el servidor");
+        if (!nombre.trim() || !descripcion.trim()) {
+            alert('Por favor, completa el nombre y la descripción');
+            return;
         }
-    } catch (error) {
-        console.error("Error de red:", error);
-        alert("Error de conexión al crear el ejercicio");
-    } finally {
-        setCargando(false);
-    }
-};
+
+        if (!pacienteId) {
+            navigate('/medico/pacient');
+            return;
+        }
+
+        setCargando(true);
+        const token = localStorage.getItem('token');
+
+        const formData = new FormData();
+        formData.append('nombre', nombre);
+        formData.append('descripcion', descripcion);
+        formData.append('elementos', elementos);
+
+        formData.append('idPaciente', pacienteId);
+
+        if (video) {
+            formData.append('video', video);
+        }
+
+        try {
+            const res = await fetch('http://localhost:3000/doctor/crearTarea', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                    // NOTA: Con FormData NO se pone 'Content-Type', el navegador lo coloca automáticamente
+                },
+                body: formData
+            });
+
+            if (res.ok) {
+                navigate(`/medico/asignarEjercicio/${pacienteId}`);
+            } else {
+                const data = await res.json();
+                alert(data.message || "Error al crear el ejercicio en el servidor");
+            }
+        } catch (error) {
+            console.error("Error de red:", error);
+            alert("Error de conexión al crear el ejercicio");
+        } finally {
+            setCargando(false);
+        }
+    };
 
     if (!pacienteId) {
         return <Navigate to="/medico/pacient" replace />;
@@ -76,6 +78,12 @@ export default function Asignar() {
     return (
         <main className="main-container">
             <div className="card-container">
+                
+                {/* BOTÓN DE VOLVER */}
+                <button type="button" className="btn-volver-crear" onClick={() => navigate(-1)}>
+                    <img src={arrowback} alt="Volver" style={{ width: '100%', height: 'auto', objectFit: 'contain' }} />
+                </button>
+
                 <h1 className="form-title">Crea un nuevo ejercicio</h1>
 
                 <form className="exercise-form" onSubmit={handleCrearEjercicio}>
@@ -138,8 +146,9 @@ export default function Asignar() {
                         </div>
                     </div>
 
+                    {/* BOTÓN DE CONFIRMAR */}
                     <button type="submit" className="confirm-btn" disabled={cargando}>
-                        {cargando ? 'Guardando...' : 'Confirmar'}
+                        <img src={confirmar} alt="Confirmar" className="confirm-icon" />
                     </button>
                 </form>
             </div>

@@ -1,5 +1,8 @@
 import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import '../css/quieresAsignarlo.css';
+import arrowback from '../img/arrowback (1).png';
+import confirmar from '../img/btn-confirmar (1).png';
 
 export default function QuieresAsignarlo() {
     const { pacienteId, ejercicioId } = useParams<{ pacienteId: string; ejercicioId: string }>();
@@ -52,36 +55,58 @@ export default function QuieresAsignarlo() {
 
     if (estadoAccion === 'exito') {
         return (
-            <div className='exitoso'>
-                <h1 className='asignadoCorrectamente'>El ejercicio fue asignado</h1>
-                <p className='habilitado'>Será habilitado a la brevedad</p>
-                <img className='imagenConfirmar' src="./asignado.png" alt="Confirmación" />
-                <button className='botonVolverInicio' onClick={volverAlInicio}>
-                    Volver al inicio
-                </button>
-            </div>
+            <main className="main-container-asignar">
+                <div className='exitoso'>
+                    <h1 className='asignadoCorrectamente'>El ejercicio fue asignado</h1>
+                    <p className='habilitado'>Será habilitado a la brevedad</p>
+                    <img className='imagenConfirmar' src="./asignado.png" alt="Confirmación" />
+                    <button className='botonVolverInicio' onClick={volverAlInicio}>
+                        Volver al inicio
+                    </button>
+                </div>
+            </main>
         );
     }
 
     if (estadoAccion === 'error') {
         return (
-            <div className='noExitoso'>
-                <h1 className='noAsignado'>Hubo un error</h1>
-                <p className='vuelveAIntentar'>Por favor, vuelve a intentarlo</p>
-                <img className='imagenError' src="/error.png" alt="Error" />
-                <button className='botonVolverInicio' onClick={volverAlInicio}>
-                    Volver al inicio
-                </button>
-            </div>
+            <main className="main-container-asignar">
+                <div className='noExitoso'>
+                    <h1 className='noAsignado'>Hubo un error</h1>
+                    <p className='vuelveAIntentar'>Por favor, vuelve a intentarlo</p>
+                    <img className='imagenError' src="/error.png" alt="Error" />
+                    <button className='botonVolverInicio' onClick={volverAlInicio}>
+                        Volver al inicio
+                    </button>
+                </div>
+            </main>
         );
     }
 
     return (
-        <div className='quieresAsignarlo'>
-            <h1>¿Deseas asignar este ejercicio?</h1>
-            <button className='botonConfirmar' onClick={handleConfirmar} disabled={cargando}>
-                {cargando ? 'Asignando...' : 'Confirmar'}
-            </button>
-        </div>
+        <main className="main-container-asignar">
+            <div className='quieresAsignarlo'>
+                {/* Botón de volver */}
+                <button type="button" className="btn-volver-asignar" onClick={() => navigate(-1)}>
+                    <img src={arrowback} alt="Volver" />
+                </button>
+
+                <h1>¿Quieres asignar este ejercicio a Ana?</h1>
+
+                {/* Cuadro gris del medio */}
+                <div className="ejercicio-card">
+                    <p>Ejercicio 1</p>
+                </div>
+
+                {/* Botón Confirmar con imagen */}
+                <button className='botonConfirmarImg' onClick={handleConfirmar} disabled={cargando}>
+                    {cargando ? (
+                        <span className="texto-cargando">Asignando...</span>
+                    ) : (
+                        <img src={confirmar} alt="Confirmar" className="confirm-icon-img" />
+                    )}
+                </button>
+            </div>
+        </main>
     );
 }

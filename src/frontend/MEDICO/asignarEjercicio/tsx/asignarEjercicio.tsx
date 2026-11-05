@@ -6,6 +6,7 @@ import flecha from '../../../PACIENTE/seleccionVIDEO/flecha.png';
 import flechaSiguiente from '../../../PACIENTE/seleccionEjercicio/arrowback.png';
 import lupa from '../img/boxicons_search-alt.png';
 import '../css/asignarEjercicio.css';
+import botonCrear from '../img/btn-crea.png'
 
 export default function AsignarEjercicio() {
     const [ejercicios, setEjercicios] = useState<Ejercicios[]>([]);
@@ -94,7 +95,7 @@ export default function AsignarEjercicio() {
                 
                 <div className="cabecera-medico">
                     <button className="btn-volver" onClick={() => navigate(-1)}>
-                        <img src={flecha} alt="Volver" style={{ width: '20px' }} />
+                        <img src={flecha} alt="Volver" />
                     </button>
                     <h1 className="titulo-medico">Asigna un nuevo ejercicio</h1>
                 </div>
@@ -149,7 +150,7 @@ export default function AsignarEjercicio() {
                 </div>
 
                 <button className="CrearEjercicio" onClick={handleNavigateCrearEjercicio}>
-                    Crea un nuevo ejercicio +
+                    <img src={botonCrear} alt="Crear Ejercicio" className="icono-crear" />
                 </button>
             </div>
         </div>

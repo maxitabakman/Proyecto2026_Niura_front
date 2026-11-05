@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import type { Tutorial } from '../../PACIENTE/seleccionEjercicio/seleccionDeEjercicios'
 import flecha from '../../PACIENTE/EleccionEjercicio/flecha.png'
 import buscar from './boxicons_search-alt.png'
@@ -8,7 +8,6 @@ import tutorialImg from './Frame 94.png'
 import './tutoriales.css'
 
 export default function Tutoriales() {
-    const { id } = useParams<{ id: string }>();
     const [busqueda, setBusqueda] = useState('');
     const [tutoriales, setTutoriales] = useState<Tutorial[]>([]);
     const navigate = useNavigate();
@@ -53,7 +52,7 @@ export default function Tutoriales() {
         navigate(-1);
     }
 
-    const handleNavigateTutorial = () => {
+    const handleNavigateTutorial = (id: string | number) => {
         navigate(`/CUIDADOR/tutorial/${id}`);
     };
 
@@ -97,7 +96,7 @@ export default function Tutoriales() {
                             <div key={tutorial.id} className="tutorial-card">
                                 <h2>{tutorial.nombre}</h2>
                                 {/* Eliminé la descripción y la imagen extra para que quede igual al diseño */}
-                                <img src={tutorialImg} alt="Navegar" className="btn-tutorial-img" onClick={handleNavigateTutorial} />
+                                <img src={tutorialImg} alt="Navegar" className="btn-tutorial-img" onClick={() => handleNavigateTutorial(tutorial.id)} />
                             </div>
                         ))}
                     </div>

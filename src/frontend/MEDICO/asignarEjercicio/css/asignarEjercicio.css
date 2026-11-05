@@ -1,0 +1,210 @@
+/* Importamos la tipografía */
+@font-face {
+    font-family: 'Helvetica Bold';
+    src: url('../../assets/fonts/Helvetica-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+/* Fondo principal ocupando toda la pantalla */
+.contenedor-fondo-medico {
+    width: 100vw;
+    min-height: 100vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Helvetica Bold', Arial, sans-serif;
+    box-sizing: border-box;
+}
+
+/* Tarjeta principal (Color teal) */
+.tarjeta-principal-medico {
+    background-color: #9cd0d8;
+    width: 1100px;
+    max-width: 95%;
+    min-height: 600px;
+    border-radius: 12px;
+    padding: 40px 60px;
+    box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+/* Cabecera (Botón volver y Título) */
+.cabecera-medico {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.btn-volver {
+    position: absolute;
+    left: 0;
+    width: 55px;
+    height: 55px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.titulo-medico {
+    font-size: 36px;
+    color: #1a2a3a;
+    margin: 0;
+    text-align: center;
+}
+
+/* Buscador */
+.contenedor-buscador {
+    display: flex;
+    align-items: center;
+    background-color: #e4e2df;
+    border-radius: 8px;
+    padding: 10px 20px;
+    width: 450px;
+    margin-bottom: 50px;
+    box-shadow: inset 0px 2px 5px rgba(0,0,0,0.05), 0px 2px 5px rgba(0,0,0,0.1);
+}
+
+.input-buscador {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    color: #555;
+    font-family: Arial, sans-serif;
+}
+
+.input-buscador::placeholder {
+    color: #a0a0a0;
+}
+
+.icono-lupa {
+    width: 20px;
+    height: 20px;
+    opacity: 0.6;
+}
+
+/* Carrusel y Grilla */
+.carrusel-contenedor {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 50px;
+}
+
+.btn-flecha {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 1. Agrandamos el ícono de volver */
+.btn-volver img {
+    width: 55px; /* Antes estaba frenado en 20px */
+    height: auto;
+    object-fit: contain;
+}
+
+/* 2. Mantenemos el alto de la grilla aunque esté vacía para que no se aplaste todo */
+.grilla-ejercicios {
+    display: flex;
+    gap: 30px;
+    flex: 1;
+    justify-content: center;
+    min-height: 260px; /* Mantiene el tamaño de una tarjeta */
+    align-items: center; /* Centra el texto de "no se encontraron ejercicios" */
+}
+
+/* 3. Agrandamos las flechas del carrusel */
+.icono-flecha {
+    width: 40px; 
+    height: auto;
+}
+
+/* 4. Corregimos la dirección de las flechas (como arrowback apunta a la izquierda por defecto) */
+.btn-flecha:first-child .icono-flecha {
+    transform: rotate(0deg); /* La primera se queda como está (Izquierda) */
+}
+
+.btn-flecha:last-child .icono-flecha {
+    transform: rotate(180deg); /* La segunda se gira (Derecha) */
+}
+
+/* Tarjeta individual de cada Ejercicio */
+.CardPendiente {
+    background: linear-gradient(180deg, #f0f4f8 0%, #c8d9e6 100%);
+    width: 180px;
+    height: 260px;
+    border-radius: 4px;
+    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 15px;
+    box-sizing: border-box;
+}
+
+.titulo-ejercicio {
+    font-size: 22px;
+    color: #2c3e50;
+    margin: 10px 0 0 0;
+    text-align: center;
+    font-weight: normal;
+}
+
+.botonAsignar {
+    background-color: #0084c7;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 25px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s;
+}
+
+.botonAsignar:hover {
+    background-color: #006da6;
+}
+
+/* Botón Crear Ejercicio (Amarillo) */
+.CrearEjercicio {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.2s ease;
+}
+
+.CrearEjercicio:hover {
+    transform: translateY(-3px); /* Le da un pequeño efecto de rebote al pasar el mouse */
+}
+
+/* Ajuste de la imagen del botón */
+.icono-crear {
+    width: 280px; /* Ajusta este valor dependiendo de qué tan grande sea tu png */
+    height: auto;
+    object-fit: contain;
+}
