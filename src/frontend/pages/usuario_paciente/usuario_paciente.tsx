@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import type { CSSProperties, ChangeEvent, FormEvent, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 // Ajustá la ruta según dónde guardes este archivo
@@ -13,31 +13,16 @@ const estiloEscala = {
   "--u": `max(0.55px, calc(min(100vw / 1366, 100vh / 768) * ${ESCALA}))`,
 } as CSSProperties;
 
-/* Endpoint que devuelve el perfil. Debe responder un JSON así:
-   { "correo": "alguien@mail.com", "imagen": "https://...jpg" }
-   ("imagen" puede venir vacía o no venir si la persona no tiene foto). */
-const URL_PERFIL = "https://mocki.io/v1/fd125f8b-20ed-4509-8051-f34005b873d8";
-
-/* Endpoint que cambia el correo. */
-const URL_CAMBIAR_CORREO =
-  "http://localhost:3000/paciente/cambiarCorreo"; // Cambialo por tu back real
-
-/* Endpoint para subir la foto */
-const URL_SUBIR_FOTO = "https://mocki.io/v1/d42ede49-cf64-42f1-8da6-d7f40d7236b5";
-
-/* Validación simple de formato; la validación real la hace el back. */
+const URL_CAMBIAR_CORREO = "http://localhost:3000/paciente/cambiarCorreo";
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type EstadoPerfil = "cargando" | "listo" | "error";
+type EstadoPerfil = "listo" | "error";
 type EstadoEnvio = "reposo" | "enviando" | "exito" | "error";
-
-// Sube la foto como archivo (multipart/form-data)
-async function subirFoto(usuario: string, archivo: File) {
-  const datos = new FormData();
-  datos.append("usuario", usuario);
-  datos.append("imagen", archivo);
-  const respuesta = await fetch(URL_SUBIR_FOTO, { method: "POST", body: datos });
-  if (!respuesta.ok) throw new Error(`El servidor respondió ${respuesta.status}`);
+interface UsuarioSesion {
+  nombre?: string;
+  apellido?: string;
+  email?: string;
+  foto?: string;
 }
 
 function IconoCambiar(): ReactNode {
@@ -72,15 +57,25 @@ const CLASE_TARJETA =
 export default function PerfilPaciente() {
   const navigate = useNavigate();
   const { nombre } = usePaciente();
+  const [usuarioSesion, setUsuarioSesion] = useState<UsuarioSesion | null>(() => {
+    try {
+      const usuario = localStorage.getItem("user");
+      return usuario ? JSON.parse(usuario) as UsuarioSesion : null;
+    } catch {
+      return null;
+    }
+  });
+  const nombreMostrar = nombre || [usuarioSesion?.nombre, usuarioSesion?.apellido]
+    .filter(Boolean)
+    .join(" ");
 
   const idInput = useId();
   const idMensaje = useId();
 
   // Datos que vienen del back
-  const [correoActual, setCorreoActual] = useState("");
-  const [fotoUrl, setFotoUrl] = useState<string | null>(null);
-  const [estadoPerfil, setEstadoPerfil] = useState<EstadoPerfil>("cargando");
-  const [intento, setIntento] = useState(0);
+  const correoActual = usuarioSesion?.email || "";
+  const [fotoUrl, setFotoUrl] = useState<string | null>(() => usuarioSesion?.foto || null);
+  const estadoPerfil: EstadoPerfil = correoActual ? "listo" : "error";
 
   // Edición de correo
   const [editando, setEditando] = useState(false);
@@ -89,43 +84,6 @@ export default function PerfilPaciente() {
   const [mensaje, setMensaje] = useState("");
 
   const enviando = estadoEnvio === "enviando";
-
-  /* ---------- Cargar perfil (correo + imagen) al entrar ---------- */
-  useEffect(() => {
-    if (!nombre) return;
-
-    const controlador = new AbortController();
-    setEstadoPerfil("cargando");
-
-    (async () => {
-      try {
-        const respuesta = await fetch(
-          `${URL_PERFIL}?usuario=${encodeURIComponent(nombre)}`,
-          { signal: controlador.signal },
-        );
-        if (!respuesta.ok) throw new Error(`Estado ${respuesta.status}`);
-
-        const datos: unknown = await respuesta.json();
-        const { correo, imagen } = (datos ?? {}) as {
-          correo?: unknown;
-          imagen?: unknown;
-        };
-
-        if (typeof correo !== "string" || !correo) {
-          throw new Error("Respuesta sin correo");
-        }
-
-        setCorreoActual(correo);
-        setFotoUrl(typeof imagen === "string" && imagen ? imagen : null);
-        setEstadoPerfil("listo");
-      } catch {
-        if (controlador.signal.aborted) return;
-        setEstadoPerfil("error");
-      }
-    })();
-
-    return () => controlador.abort();
-  }, [nombre, intento]);
 
   /* ---------- Subir / Cambiar Foto ---------- */
   function cambiarFoto(e: ChangeEvent<HTMLInputElement>) {
@@ -136,11 +94,8 @@ export default function PerfilPaciente() {
     // Validación de tipo de archivo y tamaño (máx 5MB)
     if (!archivo.type.startsWith("image/") || archivo.size > 5 * 1024 * 1024) return;
 
-    // Muestra la vista previa local inmediatamente
-    setFotoUrl(URL.createObjectURL(archivo));
-
-    // Envía la imagen al servidor
-    subirFoto(nombre, archivo).catch(console.error);
+    setEstadoEnvio("error");
+    setMensaje("El backend todavía no ofrece una ruta para subir la foto de perfil.");
   }
 
   /* ---------- Cambio de correo ---------- */
@@ -180,21 +135,20 @@ export default function PerfilPaciente() {
 
     try {
       const respuesta = await fetch(URL_CAMBIAR_CORREO, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nuevoCorreo: correoLimpio }),
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+        },
+        body: JSON.stringify({ email: correoLimpio }),
       });
 
-      if (!respuesta.ok) {
-        throw new Error(`El servidor respondió ${respuesta.status}`);
-      }
+      const cuerpo: { message?: string; email?: string } = await respuesta.json();
+      if (!respuesta.ok) throw new Error(cuerpo.message || `El servidor respondió ${respuesta.status}`);
 
-      const cuerpo: unknown = await respuesta.json();
-      if ((cuerpo as { data?: unknown } | null)?.data !== "ok") {
-        throw new Error("Respuesta inesperada del servidor");
-      }
-
-      setCorreoActual(correoLimpio);
+      const nuevoUsuarioSesion = { ...usuarioSesion, email: cuerpo.email || correoLimpio };
+      setUsuarioSesion(nuevoUsuarioSesion);
+      localStorage.setItem("user", JSON.stringify(nuevoUsuarioSesion));
       setEditando(false);
       setEstadoEnvio("exito");
       setMensaje("Correo actualizado.");
@@ -205,7 +159,7 @@ export default function PerfilPaciente() {
     }
   }
 
-  if (!nombre) {
+  if (!nombreMostrar) {
     return (
       <section
         style={estiloEscala}
@@ -240,21 +194,12 @@ export default function PerfilPaciente() {
         <div className="order-2 flex w-full flex-col items-center md:order-1 md:w-auto md:items-start">
           <div className="text-center md:w-[calc(var(--u)*246)]">
             <h1 className="text-[length:calc(var(--u)*36)] font-bold leading-tight text-[#dbe7fb]">
-              {nombre}
+              {nombreMostrar}
             </h1>
             <p className="text-[length:calc(var(--u)*24)] leading-tight text-[#dbe7fb]">
               Paciente
             </p>
           </div>
-
-          {estadoPerfil === "cargando" && (
-            <p
-              role="status"
-              className="mt-[calc(var(--u)*40)] text-[length:calc(var(--u)*24)] text-[#8fa6c7]"
-            >
-              Cargando tu perfil…
-            </p>
-          )}
 
           {estadoPerfil === "error" && (
             <div className="mt-[calc(var(--u)*40)] flex flex-col items-center gap-[calc(var(--u)*12)] md:items-start">
@@ -266,10 +211,10 @@ export default function PerfilPaciente() {
               </p>
               <button
                 type="button"
-                onClick={() => setIntento((n) => n + 1)}
+                onClick={() => navigate("/elegirinicio")}
                 className={CLASE_BOTON_SECUNDARIO}
               >
-                Reintentar
+                Iniciar sesión nuevamente
               </button>
             </div>
           )}
@@ -355,16 +300,14 @@ export default function PerfilPaciente() {
           {fotoUrl ? (
             <img
               src={fotoUrl}
-              alt={`Foto de ${nombre}`}
+              alt={`Foto de ${nombreMostrar}`}
               onError={() => setFotoUrl(null)}
               className="h-full w-full object-cover"
             />
           ) : (
-            estadoPerfil !== "cargando" && (
-              <span aria-hidden="true" className="text-[length:calc(var(--u)*90)] font-light leading-none text-[#4b5c78]">
-                +
-              </span>
-            )
+            <span aria-hidden="true" className="text-[length:calc(var(--u)*90)] font-light leading-none text-[#4b5c78]">
+              +
+            </span>
           )}
           <input
             type="file"

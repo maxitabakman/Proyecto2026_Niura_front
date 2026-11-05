@@ -60,6 +60,8 @@ import { RachaProvider } from './frontend/Contexts/providerracha';
 import { CuidadorProvider } from './frontend/Contexts/contextoCuidador';
 
 function App() {
+  const usuarioId = Number(localStorage.getItem('userId') ?? 0);
+
   return (
     <CuidadorProvider>
       <RachaProvider>
@@ -91,8 +93,8 @@ function App() {
                   <Route path="/medico/pacient/:id/historial" element={<Historial />} />
                   <Route path="/medico/pacient/:id/progreso" element={<Progresopaciente />} />
                   <Route path="/medico/noticias" element={<Noticias />} />
-                  <Route path="/medico/perfil" element={<PerfilCuidador />} />
-                  <Route path="/medico/reddecontactosmia" element={<ChatSimplificadomiopaciente usuario_id={2} />} />
+                  <Route path="/medico/perfil" element={<PerfilCuidador rol ={"Médico"} />} />
+                  <Route path="/medico/reddecontactosmia" element={<ChatSimplificadomiopaciente usuario_id={usuarioId} />} />
                   <Route path="/pendientesmedico" element={<AsignarEjercicio />} />
                   <Route path="/medico/crearEjercicio/:pacienteId" element={<CrearEjercicio />} />
                   <Route path="/medico/asignarEjercicio/:pacienteId" element={<AsignarEjercicio />} />
@@ -116,13 +118,13 @@ function App() {
                   <Route path="/paciente/seleccionAUDIO/seleccionarArchivo/:type/:id" element={<SeleccionarArchivoAudio />} />
                   <Route path="/paciente/seleccionVIDEO/grabarVideo/:type/:id" element={<GrabarVideo />} />
                   <Route path="/paciente/seleccionAUDIO/grabarAudio/:type/:id" element={<GrabarAudio />} />
-                  <Route path="/paciente/reddecontactosmia" element={<ChatSimplificadomiopaciente usuario_id={2} />} />
+                  <Route path="/paciente/reddecontactosmia" element={<ChatSimplificadomiopaciente usuario_id={usuarioId} />} />
 
                   {/* Rutas de Cuidador */}
-                  <Route path="/cuidador/perfil" element={<PerfilCuidador />} />
+                  <Route path="/cuidador/perfil" element={<PerfilCuidador rol ={ "Cuidador" } />} />
                   <Route path="/cuidador/noticias" element={<Noticias />} />
                   <Route path="/cuidador/noticias" element={<Noticias />} />
-                  <Route path="/cuidador/reddecontactosmia" element={<ChatSimplificadomiopaciente usuario_id={2} />} />
+                  <Route path="/cuidador/reddecontactosmia" element={<ChatSimplificadomiopaciente usuario_id={usuarioId} />} />
                   <Route path="/cuidador/paginagralcuidador" element={<PaginaGralCuidador />} />
                   <Route path="/cuidador/guia" element={<Guia />} />
                   <Route path="/cuidador/habilitar-ejercicios" element={<HabilitarEjercicios />} />

@@ -4,7 +4,7 @@ import flecha from '../../PACIENTE/EleccionEjercicio/flecha.png';
 import imgUpload from './btn-upload.png'; 
 import iconoExito from './yes.png';
 import iconoError from './deny.png';
-import './subirFoto.css';
+
 
 type EstadoPantalla = 'seleccion' | 'exito' | 'error';
 

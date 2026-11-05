@@ -1,191 +1,268 @@
 import { useEffect, useState } from "react";
-import type { CSSProperties,ChangeEvent, FormEvent } from "react";
+import type { CSSProperties, ChangeEvent, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useCuidador, type Paciente } from "../../Contexts/contextoCuidador";
 
-const URL_PERFIL = "https://mocki.io/v1/ab9e53b5-a50b-489e-8235-d984311f9d29";
-const URL_OPCIONES_PACIENTES = "https://mocki.io/v1/105de956-7cf2-4e78-996c-782c20aa5d10";
-const URL_AGREGAR_PACIENTE = "https://mocki.io/v1/d42ede49-cf64-42f1-8da6-d7f40d7236b5";
-const URL_CAMBIAR_CORREO = "https://mocki.io/v1/d42ede49-cf64-42f1-8da6-d7f40d7236b5";
-
-
-const URL_ELIMINAR_PACIENTE = "https://mocki.io/v1/d42ede49-cf64-42f1-8da6-d7f40d7236b5";
-// Mocki no recibe archivos: con mocki esto va a fallar. Con el back real funciona.
-const URL_SUBIR_FOTO = "https://mocki.io/v1/d42ede49-cf64-42f1-8da6-d7f40d7236b5";
-
-async function pedir(url: string, datos: Record<string, string>) {
-  const respuesta = await fetch(`${url}?${new URLSearchParams(datos)}`);
-  if (!respuesta.ok) throw new Error(`El servidor respondió ${respuesta.status}`);
-  return respuesta.json();
+interface DatosPerfil {
+  id: number;
+  nombre: string;
+  apellido: string;
+  email: string;
+  foto?: string;
 }
 
-// Para agregar paciente y cambiar correo
-async function enviar(url: string, datos: Record<string, string>) {
-  const respuesta = await pedir(url, datos);
-  // SOLO PRUEBAS: el mocki responde {"data":"ok"}. Borrar con el back real.
-  if (respuesta?.data !== "ok") throw new Error("Respuesta inesperada");
-}
+const URL_BASE = "http://localhost:3000";
+const URL_PERFIL = `${URL_BASE}/doctor/verPerfilDoctor`;
+const URL_MIS_PACIENTES = `${URL_BASE}/doctor/verPacientesDoctor`;
+const URL_ENVIAR_INVITACION_DOCTOR = `${URL_BASE}/doctor/enviarInvitacionDoctor`;
+const URL_ENVIAR_INVITACION_ACOMPANANTE = `${URL_BASE}/acompañante/enviarInvitacionAcompañante`;
+const URL_CAMBIAR_CORREO_DOCTOR = `${URL_BASE}/doctor/cambiarCorreo`;
+const URL_CAMBIAR_CORREO_ACOMPANANTE = `${URL_BASE}/acompañante/cambiarCorreo`;
+const URL_ELIMINAR_PACIENTE = `${URL_BASE}/doctor/eliminarPacienteVinculado`;
+const URL_SUBIR_FOTO = `${URL_BASE}/videos/subirFotoPerfil`;
 
-// Sube la foto como archivo (multipart/form-data).
-// No se pone Content-Type a mano: el navegador lo arma solo con su "boundary".
-async function subirFoto(usuario: string, archivo: File) {
-  const datos = new FormData();
-  datos.append("usuario", usuario);
-  datos.append("imagen", archivo);
-  const respuesta = await fetch(URL_SUBIR_FOTO, { method: "POST", body: datos });
-  if (!respuesta.ok) throw new Error(`El servidor respondió ${respuesta.status}`);
-}
-
-/* ================================================================== */
-/* PANTALLA                                                            */
-/* ================================================================== */
 const ESCALA = 1;
 const estiloEscala = {
   "--u": `max(0.55px, calc(min(100vw / 1366, 100vh / 768) * ${ESCALA}))`,
 } as CSSProperties;
 
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NOMBRE_PRUEBA = "Cuidador de prueba"; // se usa sin sesión, solo en desarrollo
 
 const BOTON_BASE =
-  "flex h-[calc(var(--u)*48)] items-center gap-[calc(var(--u)*12)] rounded-lg px-[calc(var(--u)*8)] text-[length:calc(var(--u)*23)] font-bold text-[#e8f1fc] shadow-[0_2px_4px_rgba(0,0,0,0.3)] disabled:opacity-60";
+  "flex h-[calc(var(--u)*48)] items-center gap-[calc(var(--u)*12)] rounded-lg px-[calc(var(--u)*8)] text-[length:calc(var(--u)*23)] font-bold text-[#e8f1fc] shadow-[0_2px_4px_rgba(0,0,0,0.3)] disabled:opacity-60 cursor-pointer";
 const BOTON_OSCURO = `${BOTON_BASE} bg-[#18243b]`;
 const BOTON_ROJO = `${BOTON_BASE} bg-[#d62828]`;
 const BOTON_CLARO =
-  "flex h-[calc(var(--u)*48)] items-center rounded-lg border border-[#18243b] px-[calc(var(--u)*16)] text-[length:calc(var(--u)*20)] text-[#18243b]";
+  "flex h-[calc(var(--u)*48)] items-center rounded-lg border border-[#18243b] px-[calc(var(--u)*16)] text-[length:calc(var(--u)*20)] text-[#18243b] cursor-pointer";
 const CAMPO =
   "h-[calc(var(--u)*48)] w-full max-w-[calc(var(--u)*420)] rounded-lg border border-[#18243b] bg-white/80 px-[calc(var(--u)*14)] text-[length:calc(var(--u)*22)] text-black";
 
 type Panel = "agregar" | "eliminar" | "correo" | null;
 
-export default function PerfilCuidador( ) {
+function leerPerfilGuardado(): DatosPerfil | null {
+  try {
+    const usuarioGuardado = localStorage.getItem("user");
+    return usuarioGuardado ? JSON.parse(usuarioGuardado) as DatosPerfil : null;
+  } catch {
+    return null;
+  }
+}
+
+export default function PerfilCuidador(rol: { rol: string }) {
+  const navigate = useNavigate();
   const { nombre: nombreSesion } = useCuidador();
+  const esDoctor = rol.rol === "Médico";
 
-  // Sin sesión, en desarrollo entramos con un cuidador de prueba
-  const nombre = nombreSesion || (import.meta.env.DEV ? NOMBRE_PRUEBA : "");
-  const esPrueba = !nombreSesion && nombre !== "";
-
-  // Datos del back
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(false);
-  const [correo, setCorreo] = useState("");
-  const [foto, setFoto] = useState("");
+  const [perfil, setPerfil] = useState<DatosPerfil | null>(() =>
+    esDoctor ? null : leerPerfilGuardado()
+  );
+  const [cargando, setCargando] = useState(() =>
+    esDoctor && Boolean(localStorage.getItem("token"))
+  );
+  const [error, setError] = useState(() => !esDoctor && !perfil);
+  const [correo, setCorreo] = useState(perfil?.email || "");
+  const [foto, setFoto] = useState(perfil?.foto || "");
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
-  const [opciones, setOpciones] = useState<Paciente[]>([]);
 
-  // Interfaz
   const [panel, setPanel] = useState<Panel>(null);
-  const [eleccion, setEleccion] = useState(""); // paciente elegido (agregar / cambiar)
+  const [idPacienteInput, setIdPacienteInput] = useState("");
+  const [eleccionEliminar, setEleccionEliminar] = useState("");
   const [nuevoCorreo, setNuevoCorreo] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [mensajeEstado, setMensajeEstado] = useState<string | null>(null);
 
-  // Al entrar: pedir el perfil
+  const getToken = () => localStorage.getItem("token") || "";
+
+  // Carga paralela de datos de usuario y pacientes asociados desde el Backend
   useEffect(() => {
-    if (!nombre) return;
-    pedir(URL_PERFIL, { usuario: nombre })
-      .then((perfil) => {
-        setCorreo(perfil.correo);
-        setFoto(perfil.imagen ?? "");
-        setPacientes(perfil.pacientes);
-      })
-      .catch(() => setError(true))
-      .finally(() => setCargando(false));
-  }, [nombre]);
+    const token = getToken();
+    if (!token || !esDoctor) return;
 
-  // No ofrecemos pacientes que ya tiene asignados
-  const disponibles = opciones.filter(
-    (o) => !pacientes.some((p) => String(p.id) === String(o.id)),
-  );
+    Promise.all([
+      fetch(URL_PERFIL, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then((res) => (res.ok ? res.json() : Promise.reject(res))),
+
+      fetch(URL_MIS_PACIENTES, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then((res) => (res.ok ? res.json() : Promise.reject(res))),
+    ])
+      .then(([dataPerfil, dataPacientes]) => {
+        const u = dataPerfil.medico || dataPerfil.usuario;
+        if (u) {
+          setPerfil(u);
+          setCorreo(u.email);
+          setFoto(u.foto || "");
+        }
+        setPacientes(Array.isArray(dataPacientes.pacientes) ? dataPacientes.pacientes : []);
+      })
+      .catch((err) => {
+        console.error("Error al cargar perfil:", err);
+        setError(true);
+      })
+      .finally(() => {
+        setCargando(false);
+      });
+  }, [esDoctor]);
 
   function abrirPanel(destino: Exclude<Panel, null>) {
-    setEleccion("");
+    setIdPacienteInput("");
+    setEleccionEliminar("");
     setNuevoCorreo("");
+    setMensajeEstado(null);
 
     if (panel === destino) {
-      setPanel(null); // tocar el mismo botón otra vez lo cierra
+      setPanel(null);
       return;
     }
     setPanel(destino);
-
-    if (destino === "agregar") {
-      pedir(URL_OPCIONES_PACIENTES, { usuario: nombre })
-        .then((lista) => {
-          // Tiene que ser una lista [{ id, nombre }, ...]; si no, daría pantalla en blanco
-          if (!Array.isArray(lista)) throw new Error("El mocki de opciones no devolvió una lista");
-          setOpciones(lista);
-        })
-        .catch(console.error);
-    }
   }
 
-  // Envía algo al back. La pantalla solo cambia si el back confirmó;
-  // si falla, el error queda en la consola.
-  async function ejecutar(accion: () => Promise<void>) {
+  // Enviar invitación a paciente por su ID
+  async function agregarPaciente(e: FormEvent) {
+    e.preventDefault();
+    const idNum = Number(idPacienteInput.trim());
+    if (!idNum || isNaN(idNum)) {
+      setMensajeEstado("Ingresá un ID válido de paciente.");
+      return;
+    }
+
     setEnviando(true);
+    setMensajeEstado(null);
+
     try {
-      await accion();
-      setPanel(null);
-    } catch (e) {
-      console.error(e);
+      const res = await fetch(
+        esDoctor ? URL_ENVIAR_INVITACION_DOCTOR : URL_ENVIAR_INVITACION_ACOMPANANTE,
+        {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({ idPaciente: idNum }),
+        },
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "No se pudo enviar la invitación");
+
+      setMensajeEstado("Invitación enviada con éxito.");
+      setTimeout(() => setPanel(null), 1500);
+    } catch (err: unknown) {
+      setMensajeEstado(err instanceof Error ? err.message : "No se pudo enviar la invitación.");
     } finally {
       setEnviando(false);
     }
   }
 
-  async function agregarPaciente(e: FormEvent) {
-    e.preventDefault();
-    const elegido = disponibles.find((o) => String(o.id) === eleccion);
-    if (!elegido) return;
-    await ejecutar(
-      async () => {
-        await enviar(URL_AGREGAR_PACIENTE, { usuario: nombre, pacienteId: String(elegido.id) });
-        setPacientes((anteriores) => [...anteriores, elegido]);
-      },
-    );
-  }
-
+  // Desvincular un paciente
   async function eliminarPaciente(e: FormEvent) {
     e.preventDefault();
-    const elegido = pacientes.find((p) => String(p.id) === eleccion);
-    if (!elegido) return;
-    await ejecutar(
-      async () => {
-        await enviar(URL_ELIMINAR_PACIENTE, { usuario: nombre, pacienteId: String(elegido.id) });
-        setPacientes((anteriores) => anteriores.filter((p) => String(p.id) !== String(elegido.id)));
-      },
-    );
+    if (!esDoctor) return;
+    const idNum = Number(eleccionEliminar);
+    if (!idNum) return;
+
+    setEnviando(true);
+    setMensajeEstado(null);
+
+    try {
+      const res = await fetch(URL_ELIMINAR_PACIENTE, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({ pacienteId: idNum }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Error al desvincular paciente");
+
+      setPacientes((anteriores) => anteriores.filter((p) => p.id !== idNum));
+      setPanel(null);
+    } catch (err: unknown) {
+      setMensajeEstado(err instanceof Error ? err.message : "Error al desvincular paciente.");
+    } finally {
+      setEnviando(false);
+    }
   }
 
-  // La foto se muestra apenas se elige y se manda al back.
+  // Subir imagen a Cloudinary / Servidor
   function cambiarFoto(e: ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0];
-    e.target.value = ""; // permite volver a elegir el mismo archivo
-    if (!archivo) return;
-
-    if (!archivo.type.startsWith("image/") || archivo.size > 5 * 1024 * 1024) return;
+    e.target.value = "";
+    if (!archivo || !archivo.type.startsWith("image/") || archivo.size > 5 * 1024 * 1024) return;
 
     setFoto(URL.createObjectURL(archivo));
-    // Si el back falla, solo queda registrado en la consola
-    subirFoto(nombre, archivo).catch(console.error);
+
+    const formData = new FormData();
+    formData.append("imagen", archivo);
+
+    fetch(URL_SUBIR_FOTO, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: formData,
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.foto) setFoto(data.foto);
+      })
+      .catch((err) => console.error("Error al subir foto:", err));
   }
 
+  // Actualizar correo electrónico
   async function guardarCorreo(e: FormEvent) {
     e.preventDefault();
     const nuevo = nuevoCorreo.trim();
-    if (!REGEX_CORREO.test(nuevo)) return;
+    if (!REGEX_CORREO.test(nuevo)) {
+      setMensajeEstado("Ingresá un correo electrónico válido.");
+      return;
+    }
     if (nuevo.toLowerCase() === correo.toLowerCase()) return;
-    await ejecutar(
-      async () => {
-        await enviar(URL_CAMBIAR_CORREO, { usuario: nombre, nuevoCorreo: nuevo });
-        setCorreo(nuevo);
-      },
-    );
+
+    setEnviando(true);
+    setMensajeEstado(null);
+
+    try {
+      const res = await fetch(
+        esDoctor ? URL_CAMBIAR_CORREO_DOCTOR : URL_CAMBIAR_CORREO_ACOMPANANTE,
+        {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({ email: nuevo }),
+        },
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Error al cambiar correo");
+
+      setCorreo(nuevo);
+      const usuarioGuardado = localStorage.getItem("user");
+      if (usuarioGuardado) {
+        const usuario = JSON.parse(usuarioGuardado) as DatosPerfil;
+        localStorage.setItem("user", JSON.stringify({ ...usuario, email: nuevo }));
+      }
+      setPanel(null);
+    } catch (err: unknown) {
+      setMensajeEstado(err instanceof Error ? err.message : "Error al cambiar correo.");
+    } finally {
+      setEnviando(false);
+    }
   }
 
-  if (!nombre) {
+  if (!getToken()) {
     return (
-      <p className="text-center text-[length:calc(var(--u)*26)] text-black" style={estiloEscala}>
-        No encontramos tu sesión. Iniciá sesión para ver tu perfil.
-      </p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        <p className="text-center text-[length:calc(var(--u)*26)] text-black" style={estiloEscala}>
+          No encontramos tu sesión. Iniciá sesión para ver tu perfil.
+        </p>
+        <button onClick={() => navigate("/login")} className={BOTON_OSCURO} style={estiloEscala}>
+          Ir al Login
+        </button>
+      </div>
     );
   }
 
@@ -195,26 +272,24 @@ export default function PerfilCuidador( ) {
     </button>
   );
 
+  const nombreMostrar = perfil
+    ? `${perfil.nombre} ${perfil.apellido}`
+    : nombreSesion || "Cargando perfil...";
+
   return (
     <section
       style={estiloEscala}
-      className="mx-auto w-[calc(var(--u)*1103)] max-w-full font-[Helvetica,Arial,sans-serif]"
+      className="mx-auto w-[calc(var(--u)*1103)] max-w-full font-[Helvetica,Arial,sans-serif] p-4"
     >
-      {esPrueba && (
-        <p className="mb-[calc(var(--u)*12)] rounded-lg bg-[#f7e8bb] px-[calc(var(--u)*16)] py-[calc(var(--u)*8)] text-center text-[length:calc(var(--u)*18)] text-[#5c4a1e]">
-          Modo prueba: no hay sesión iniciada, estás viendo un cuidador de prueba.
-        </p>
-      )}
-
-      {/* flex-col-reverse: en celular la foto queda arriba; desde md, a la derecha */}
       <div className="flex flex-col-reverse items-center gap-[calc(var(--u)*32)] rounded-[calc(var(--u)*10)] bg-[#b3d9e6] px-[calc(var(--u)*24)] py-[calc(var(--u)*40)] shadow-[0_4px_8px_rgba(0,0,0,0.3)] md:flex-row md:items-start md:justify-between md:pb-[calc(var(--u)*56)] md:pl-[calc(var(--u)*78)] md:pr-[calc(var(--u)*150)] md:pt-[calc(var(--u)*36)]">
-        {/* ---------- Datos ---------- */}
+
+        {/* Datos Principales */}
         <div className="flex w-full flex-col items-center md:w-auto md:items-start">
-          <div className="w-fit text-center">
+          <div className="w-fit text-center md:text-left">
             <h1 className="break-words text-[length:calc(var(--u)*40)] font-bold leading-tight text-black">
-              {nombre}
+              {nombreMostrar}
             </h1>
-            <p className="text-[length:calc(var(--u)*24)] leading-tight text-black">cuidador</p>
+            <p className="text-[length:calc(var(--u)*24)] leading-tight text-black">{rol.rol}</p>
           </div>
 
           {cargando && (
@@ -222,19 +297,22 @@ export default function PerfilCuidador( ) {
               Cargando tu perfil…
             </p>
           )}
+
           {error && (
             <p className="mt-[calc(var(--u)*40)] text-[length:calc(var(--u)*22)] text-[#a32020]">
-              No pudimos cargar tu perfil. Probá recargar la página.
+              No pudimos cargar tu perfil. Comprobá que tu sesión sea válida.
             </p>
           )}
 
           {!cargando && !error && (
             <>
-              {/* ===== Pacientes ===== */}
+              {/* Pacientes Asignados */}
               <p className="mt-[calc(var(--u)*40)] text-[length:calc(var(--u)*24)] text-black">
                 <strong>Pacientes</strong>:{" "}
                 {pacientes.length === 0
-                  ? "todavía no tenés pacientes asignados"
+                  ? esDoctor
+                    ? "todavía no tenés pacientes asignados"
+                    : "la lista de pacientes aún no está disponible"
                   : pacientes.map((p, i) => (
                       <span key={p.id}>
                         {i > 0 && ", "}
@@ -243,52 +321,56 @@ export default function PerfilCuidador( ) {
                     ))}
               </p>
 
+              {/* Acciones */}
               <div className="mt-[calc(var(--u)*30)] flex flex-wrap justify-center gap-[calc(var(--u)*24)] md:justify-start">
                 <button type="button" onClick={() => abrirPanel("agregar")} className={BOTON_OSCURO}>
                   Agregar paciente +
                 </button>
-                <button
-                  type="button"
-                  onClick={() => abrirPanel("eliminar")}
-                  disabled={pacientes.length === 0}
-                  className={BOTON_ROJO}
-                >
-                  Eliminar paciente
-                </button>
+                {esDoctor && (
+                  <button
+                    type="button"
+                    onClick={() => abrirPanel("eliminar")}
+                    disabled={pacientes.length === 0}
+                    className={BOTON_ROJO}
+                  >
+                    Eliminar paciente
+                  </button>
+                )}
               </div>
 
+              {mensajeEstado && (
+                <p className="mt-2 text-[length:calc(var(--u)*18)] text-[#18243b] font-medium">
+                  {mensajeEstado}
+                </p>
+              )}
+
+              {/* Formulario Agregar Paciente por ID */}
               {panel === "agregar" && (
                 <form onSubmit={agregarPaciente} className="mt-[calc(var(--u)*16)] flex w-full flex-col gap-[calc(var(--u)*12)]">
-                  <select
-                    aria-label="Paciente a agregar"
-                    value={eleccion}
-                    onChange={(e) => setEleccion(e.target.value)}
+                  <input
+                    type="number"
+                    aria-label="ID del paciente a invitar"
+                    placeholder="Ingresá el ID del paciente"
+                    value={idPacienteInput}
+                    onChange={(e) => setIdPacienteInput(e.target.value)}
                     className={CAMPO}
-                  >
-                    <option value="" disabled>
-                      {disponibles.length > 0 ? "Elegí un paciente" : "No hay más pacientes para agregar"}
-                    </option>
-                    {disponibles.map((o) => (
-                      <option key={o.id} value={String(o.id)}>
-                        {o.nombre}
-                      </option>
-                    ))}
-                  </select>
+                  />
                   <div className="flex gap-[calc(var(--u)*12)]">
                     <button type="submit" disabled={enviando} className={BOTON_OSCURO}>
-                      {enviando ? "Agregando…" : "Agregar"}
+                      {enviando ? "Enviando…" : "Enviar invitación"}
                     </button>
                     {cancelar}
                   </div>
                 </form>
               )}
 
-              {panel === "eliminar" && (
+              {/* Formulario Eliminar Paciente */}
+              {esDoctor && panel === "eliminar" && (
                 <form onSubmit={eliminarPaciente} className="mt-[calc(var(--u)*16)] flex w-full flex-col gap-[calc(var(--u)*12)]">
                   <select
                     aria-label="Paciente a eliminar"
-                    value={eleccion}
-                    onChange={(e) => setEleccion(e.target.value)}
+                    value={eleccionEliminar}
+                    onChange={(e) => setEleccionEliminar(e.target.value)}
                     className={CAMPO}
                   >
                     <option value="" disabled>
@@ -301,7 +383,7 @@ export default function PerfilCuidador( ) {
                     ))}
                   </select>
                   <div className="flex gap-[calc(var(--u)*12)]">
-                    <button type="submit" disabled={enviando} className={BOTON_ROJO}>
+                    <button type="submit" disabled={enviando || !eleccionEliminar} className={BOTON_ROJO}>
                       {enviando ? "Eliminando…" : "Eliminar"}
                     </button>
                     {cancelar}
@@ -309,7 +391,7 @@ export default function PerfilCuidador( ) {
                 </form>
               )}
 
-              {/* ===== Correo ===== */}
+              {/* Sección Correo */}
               <p className="mt-[calc(var(--u)*64)] break-all text-[length:calc(var(--u)*24)] text-black md:break-normal">
                 <strong>Correo</strong>: {correo}
               </p>
@@ -322,6 +404,7 @@ export default function PerfilCuidador( ) {
                 Cambiar correo ⇄
               </button>
 
+              {/* Formulario Cambiar Correo */}
               {panel === "correo" && (
                 <form onSubmit={guardarCorreo} className="mt-[calc(var(--u)*16)] flex w-full flex-col gap-[calc(var(--u)*12)]">
                   <input
@@ -344,13 +427,13 @@ export default function PerfilCuidador( ) {
           )}
         </div>
 
-        {/* ---------- Foto: tocar el círculo para elegir o cambiar la imagen ---------- */}
+        {/* Foto de Perfil */}
         <label
           title={foto ? "Cambiar foto" : "Agregar foto"}
           className="flex h-[calc(var(--u)*200)] w-[calc(var(--u)*200)] min-h-[100px] min-w-[100px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-black bg-[#d9d9d9] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#18243b] md:mt-[calc(var(--u)*11)]"
         >
           {foto ? (
-            <img src={foto} alt={`Foto de ${nombre}`} className="h-full w-full object-cover" />
+            <img src={foto} alt={`Foto de ${nombreMostrar}`} className="h-full w-full object-cover" />
           ) : (
             !cargando && (
               <span aria-hidden="true" className="text-[length:calc(var(--u)*90)] font-light leading-none text-[#4b5c78]">

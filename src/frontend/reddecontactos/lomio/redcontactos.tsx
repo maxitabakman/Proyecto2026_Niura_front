@@ -1,87 +1,119 @@
 import { useEffect, useState, useRef } from 'react';
-import type { Conversacion, Mensaje } from '../../interfaces/redcontactos';
-import contactosMock from '../lomio/contactos.json';
 import ContactoCard from './contactocard';
 import { formatearFecha } from '../../utils/funcionparalafecha';
 
-interface ConversacionConFecha extends Conversacion {
-  updatedAt: number;
+interface ContactoBackend {
+  id: number;
+  nombre: string;
+  apellido?: string;
+  foto?: string;
+  rol: number;
 }
 
-// 1. Definimos la interfaz para las props del componente
-interface ChatSimplificadoProps {
+interface MensajeBackend {
+  id: number | string;
+  contenido: string;
+  fecha: string;
+  remitente: number;
+  receptor: number;
+}
+
+interface ChatProps {
   usuario_id: number;
 }
 
-// 2. Desestructuramos las props en la firma del componente
-export default function ChatSimplificadomiopaciente({ usuario_id }: ChatSimplificadoProps) {
-  const [contactos, setContactos] = useState<ConversacionConFecha[]>(() => {
-    const tiempoBase = Date.now();
-    return (contactosMock as Conversacion[]).map((c, index) => ({
-      ...c,
-      updatedAt: tiempoBase - index * 60000,
-    }));
-  });
+const API_BASE = "http://localhost:3000";
 
-  const [idActivo, setIdActivo] = useState<string>(
-    (contactosMock as Conversacion[])[0]?.id_conversacion || ''
-  );
+export default function ChatSimplificadomiopaciente({ usuario_id }: ChatProps) {
+  const [contactos, setContactos] = useState<ContactoBackend[]>([]);
+  const [idActivo, setIdActivo] = useState<number | null>(null);
+  const [mensajes, setMensajes] = useState<MensajeBackend[]>([]);
   const [texto, setTexto] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [cargandoContactos, setCargandoContactos] = useState(true);
 
   const mensajesEndRef = useRef<HTMLDivElement>(null);
 
-  const contactoActivo =
-    contactos.find((c) => c.id_conversacion === idActivo) || contactos[0];
-  const mensajes = contactoActivo?.mensajes || [];
+  const getToken = () => localStorage.getItem('token') || '';
 
-  const contactosConPuntuacion = [];
-  for (let i = 0; i < contactos.length; i++) {
-    const contacto = contactos[i];
-    const ultimoMensaje = contacto.mensajes?.[contacto.mensajes.length - 1];
-    const puntuacion = ultimoMensaje ? new Date(ultimoMensaje.fecha_envio).getTime() : 0;
+  // 1. Cargar lista de contactos reales al montar
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
 
-    contactosConPuntuacion.push({
-      ...contacto,
-      puntuacion: puntuacion,
-    });
-  }
+    fetch(`${API_BASE}/mensajes/contactos`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.contactos)) {
+          setContactos(data.contactos);
+          if (data.contactos.length > 0) {
+            setIdActivo(data.contactos[0].id);
+          }
+        }
+      })
+      .catch((err) => console.error("Error al cargar contactos:", err))
+      .finally(() => setCargandoContactos(false));
+  }, []);
 
-  const contactosFiltradosYOrdenados = contactosConPuntuacion
-    .filter((c) => c.nombre_contacto.toLowerCase().includes(busqueda.toLowerCase()))
-    .sort((a, b) => b.puntuacion - a.puntuacion);
+  // 2. Cargar historial de mensajes al cambiar de contacto activo
+  useEffect(() => {
+    if (!idActivo) return;
+    const token = getToken();
 
+    fetch(`${API_BASE}/mensajes/historial/${idActivo}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.mensajes)) {
+          setMensajes(data.mensajes);
+        }
+      })
+      .catch((err) => console.error("Error al cargar mensajes:", err));
+  }, [idActivo]);
+
+  // Autoscroll hacia abajo al recibir/enviar mensajes
   useEffect(() => {
     mensajesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [mensajes.length, idActivo]);
+  }, [mensajes.length]);
 
-  const enviarMensaje = () => {
-    if (!texto.trim() || !contactoActivo) return;
+  const contactoActivo = contactos.find((c) => c.id === idActivo);
 
-    const ahora = Date.now();
-    const nuevoMensaje: Mensaje = {
-      id_mensaje: `msg_${ahora}`,
-      id_conversacion: contactoActivo.id_conversacion,
-      id_emisor: usuario_id,
-      id_receptor: contactoActivo.id_contacto,
-      contenido: texto,
-      estado_entrega: 'enviando',
-      fecha_envio: new Date().toISOString(),
-    };
+  const contactosFiltrados = contactos.filter((c) => {
+    const nombreCompleto = `${c.nombre} ${c.apellido || ''}`.toLowerCase();
+    return nombreCompleto.includes(busqueda.toLowerCase());
+  });
 
-    setContactos((prev) =>
-      prev.map((c) =>
-        c.id_conversacion === contactoActivo.id_conversacion
-          ? {
-              ...c,
-              mensajes: [...(c.mensajes || []), nuevoMensaje],
-              updatedAt: ahora,
-            }
-          : c
-      )
-    );
+  // 3. Enviar mensaje a la BD
+  const enviarMensaje = async () => {
+    if (!texto.trim() || !idActivo) return;
 
+    const token = getToken();
+    const contenidoEnviado = texto.trim();
     setTexto('');
+
+    try {
+      const res = await fetch(`${API_BASE}/mensajes/enviar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          receptorId: idActivo,
+          contenido: contenidoEnviado
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.mensaje) {
+        setMensajes((prev) => [...prev, data.mensaje]);
+      }
+    } catch (err) {
+      console.error("Error al enviar mensaje:", err);
+    }
   };
 
   return (
@@ -102,23 +134,28 @@ export default function ChatSimplificadomiopaciente({ usuario_id }: ChatSimplifi
         </div>
 
         <div className="flex flex-col gap-2.5 overflow-y-auto pr-0.5 flex-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {contactosFiltradosYOrdenados.map((contacto) => (
-            <ContactoCard
-              key={contacto.id_conversacion}
-              contacto={contacto}
-              esActivo={contacto.id_conversacion === idActivo}
-              onClick={() => {
-                setIdActivo(contacto.id_conversacion);
-                setContactos((prev) =>
-                  prev.map((c) =>
-                    c.id_conversacion === contacto.id_conversacion
-                      ? { ...c, mensajes_no_leidos: 0 }
-                      : c
-                  )
-                );
-              }}
-            />
-          ))}
+          {cargandoContactos ? (
+            <p className="text-white text-xs text-center mt-4">Cargando contactos...</p>
+          ) : contactosFiltrados.length === 0 ? (
+            <p className="text-white text-xs text-center mt-4">No tenés contactos disponibles.</p>
+          ) : (
+            contactosFiltrados.map((contacto) => (
+              <ContactoCard
+                key={contacto.id}
+                contacto={{
+                  id_conversacion: String(contacto.id),
+                  id_contacto: contacto.id,
+                  nombre_contacto: `${contacto.nombre} ${contacto.apellido || ''}`,
+                  avatar_contacto: contacto.foto ?? '',
+                  estado_presencia: 'offline',
+                  mensajes_no_leidos: 0,
+                  mensajes: []
+                }}
+                esActivo={contacto.id === idActivo}
+                onClick={() => setIdActivo(contacto.id)}
+              />
+            ))
+          )}
         </div>
       </div>
 
@@ -127,10 +164,10 @@ export default function ChatSimplificadomiopaciente({ usuario_id }: ChatSimplifi
         {/* Cabecera del chat */}
         <div className="bg-[#D3E2F3] px-5 py-2.5 flex items-center gap-3 border-b-2 border-black shrink-0">
           <div className="w-9 h-9 rounded-full bg-[#D9D9D9] border-2 border-black flex items-center justify-center shrink-0 overflow-hidden">
-            {contactoActivo?.avatar_contacto ? (
+            {contactoActivo?.foto ? (
               <img
-                src={contactoActivo.avatar_contacto}
-                alt={contactoActivo.nombre_contacto}
+                src={contactoActivo.foto}
+                alt={contactoActivo.nombre}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -138,19 +175,18 @@ export default function ChatSimplificadomiopaciente({ usuario_id }: ChatSimplifi
             )}
           </div>
           <h3 className="font-bold text-black text-base tracking-wide truncate">
-            {contactoActivo?.nombre_contacto || 'Nombre de la Persona'}
+            {contactoActivo ? `${contactoActivo.nombre} ${contactoActivo.apellido || ''}` : 'Seleccioná un contacto'}
           </h3>
         </div>
 
         {/* Mensajes */}
         <div className="flex-1 overflow-y-auto flex flex-col gap-3 p-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {mensajes && mensajes.length > 0 ? (
+          {mensajes.length > 0 ? (
             mensajes.map((msg) => {
-              // Comparación lógica corregida para determinar si el mensaje es propio
-              const esMio = msg.id_emisor === usuario_id;
+              const esMio = msg.remitente === usuario_id;
               return (
                 <div
-                  key={msg.id_mensaje}
+                  key={msg.id}
                   className={`px-4 py-2.5 rounded-2xl text-sm max-w-[75%] break-words border-2 border-black/40 shadow-sm ${
                     esMio
                       ? 'bg-[#0085FF] text-white self-end rounded-br-none'
@@ -163,7 +199,7 @@ export default function ChatSimplificadomiopaciente({ usuario_id }: ChatSimplifi
                       esMio ? 'text-blue-100' : 'text-gray-700'
                     }`}
                   >
-                    {formatearFecha(msg.fecha_envio)}
+                    {formatearFecha(msg.fecha)}
                   </div>
                 </div>
               );
@@ -192,7 +228,7 @@ export default function ChatSimplificadomiopaciente({ usuario_id }: ChatSimplifi
           />
           <button
             onClick={enviarMensaje}
-            className="w-10 h-10 bg-[#0085FF] border-2 border-black hover:bg-[#0072DB] text-white rounded-full flex items-center justify-center shrink-0 transition-all shadow-md active:scale-95"
+            className="w-10 h-10 bg-[#0085FF] border-2 border-black hover:bg-[#0072DB] text-white rounded-full flex items-center justify-center shrink-0 transition-all shadow-md active:scale-95 cursor-pointer"
             title="Enviar mensaje"
           >
             <svg

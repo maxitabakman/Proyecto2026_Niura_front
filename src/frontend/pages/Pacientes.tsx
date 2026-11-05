@@ -5,12 +5,16 @@ import { useNavigate } from 'react-router-dom';
 import PatientCard from '../components/patientCard';
 import { useMedico, type Paciente } from '../Contexts/contextoMedico';
 
-const URL_PACIENTES = 'https://mocki.io/v1/4fa7ffcd-f9b9-4eef-90b9-0ada02a90461';
+const URL_PACIENTES = 'http://localhost:3000/doctor/verPacientesDoctor';
 
 const PACIENTES_POR_PAGINA = 7;
 
 interface RespuestaPacientes {
-    pacientes: Paciente[];
+    pacientes: Array<{
+        id: number | string;
+        nombre: string;
+        apellido: string;
+    }>;
 }
 
 export default function Pacientes() {
@@ -31,7 +35,15 @@ export default function Pacientes() {
                 setCargando(true);
                 setError('');
 
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    throw new Error('Iniciá sesión para ver tus pacientes.');
+                }
+
                 const respuesta = await fetch(URL_PACIENTES, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
                     signal: controller.signal
                 });
 
@@ -40,13 +52,25 @@ export default function Pacientes() {
                 }
 
                 const datos: RespuestaPacientes = await respuesta.json();
-                setPacientes(datos.pacientes);
+                if (!Array.isArray(datos.pacientes)) {
+                    throw new Error('El servidor devolvió una lista de pacientes inválida.');
+                }
+
+                setPacientes(datos.pacientes.map((paciente) => ({
+                    id: String(paciente.id),
+                    nombre: paciente.nombre,
+                    apellido: paciente.apellido,
+                    rol: 'Paciente',
+                    avatar: null,
+                })));
             } catch (error) {
                 if (error instanceof Error && error.name === 'AbortError') {
                     return;
                 }
 
-                setError('No se pudieron cargar los pacientes. Intentá nuevamente.');
+                setError(error instanceof Error
+                    ? error.message
+                    : 'No se pudieron cargar los pacientes. Intentá nuevamente.');
             } finally {
                 if (!controller.signal.aborted) {
                     setCargando(false);
