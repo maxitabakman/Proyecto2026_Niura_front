@@ -1,49 +1,77 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import type { Ejercicios } from '../../../PACIENTE/seleccionEjercicio/seleccionDeEjercicios';
+import { useState } from 'react';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+
 import '../css/crearEjercicio.css';
 
 export default function Asignar() {
     const [ nombre, setNombre ] = useState<string>('');
     const [ descripcion, setDescripcion ] = useState<string>('');
     const [ elementos, setElementos ] = useState<string>('');
-    const [ video, setVideo ] = useState<File | null | undefined>(null);
-    const [ ejercicios, setEjercicios ] = useState<Ejercicios[]>([]);
+    const [ video, setVideo ] = useState<File | null>(null);
+    const [ cargando, setCargando ] = useState<boolean>(false);
+
     const navigate = useNavigate();
+    const { pacienteId } = useParams<{ pacienteId: string }>();
 
     const handleSeleccionarArchivo = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const video = e.target.files?.[0];
-        setVideo(video)
+        const file = e.target.files?.[0];
+        if (file) setVideo(file);
+    };
+
+    const handleCrearEjercicio = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!nombre.trim() || !descripcion.trim()) {
+        alert('Por favor, completa el nombre y la descripción');
+        return;
     }
 
-    const handleCrearEjercicio = async () => {
-        const formData = new FormData();
-        formData.append('nombre', nombre);
-        formData.append('descripcion', descripcion);
-        formData.append('elementos', elementos);
-        if (video) {
-            formData.append('video', video);
-        }
+    if (!pacienteId) {
+        navigate('/medico/pacient');
+        return;
+    }
 
-        try {
-            const res = await fetch('/api/crearEjercicio', {
-                method: 'POST',
-                body: formData
-            });
+    setCargando(true);
+    const token = localStorage.getItem('token');
 
-            if (res.ok) {
-                const ejercicioCreado: Ejercicios = await res.json();
-                
-                setEjercicios([...ejercicios, ejercicioCreado]); 
-                
-                navigate('/asignarEjercicio');
-            } else {
-                console.error("Error al crear el ejercicio en el servidor");
-            }
-        } catch (error) {
-            console.error("Error de red:", error);
+    const formData = new FormData();
+    formData.append('nombre', nombre);
+    formData.append('descripcion', descripcion);
+    formData.append('elementos', elementos);
+
+    formData.append('idPaciente', pacienteId);
+
+    if (video) {
+        formData.append('video', video);
+    }
+
+    try {
+        const res = await fetch('http://localhost:3000/doctor/crearTarea', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+                // NOTA: Con FormData NO se pone 'Content-Type', el navegador lo coloca automáticamente
+            },
+            body: formData
+        });
+
+        if (res.ok) {
+            navigate(`/medico/asignarEjercicio/${pacienteId}`);
+        } else {
+            const data = await res.json();
+            alert(data.message || "Error al crear el ejercicio en el servidor");
         }
-    };
+    } catch (error) {
+        console.error("Error de red:", error);
+        alert("Error de conexión al crear el ejercicio");
+    } finally {
+        setCargando(false);
+    }
+};
+
+    if (!pacienteId) {
+        return <Navigate to="/medico/pacient" replace />;
+    }
 
     return (
         <main className="main-container">
@@ -96,7 +124,6 @@ export default function Asignar() {
                             style={{ display: 'none' }}
                         />
 
-                        {/* Iconos de acceso rápido abajo del botón de video */}
                         <div className="media-quick-icons">
                             <div className="quick-icon-btn">
                                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -111,11 +138,11 @@ export default function Asignar() {
                         </div>
                     </div>
 
-                    <button type="submit" className="confirm-btn" onClick={handleCrearEjercicio}>
-                        Confirmar
+                    <button type="submit" className="confirm-btn" disabled={cargando}>
+                        {cargando ? 'Guardando...' : 'Confirmar'}
                     </button>
                 </form>
             </div>
         </main>
     );
-    }
+}

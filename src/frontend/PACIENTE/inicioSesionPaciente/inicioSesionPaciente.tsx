@@ -8,7 +8,7 @@ import logo from '../../PACIENTE/registroPaciente/logo.png';
 export default function InicioSesionPaciente () {
     const [ nombre, setNombre ] = useState<string>('');
     const [ apellido, setApellido ] = useState<string>('');
-    const [ mail, setMail ] = useState<string>(''); // Nuevo estado para el email
+    const [ mail, setMail ] = useState<string>(''); 
     const [ contraseña, setContraseña ] = useState<string>('');
     const [ cargando, setCargando ] = useState<boolean>(false);
     const [ error, setError ] = useState<string | null>(null);

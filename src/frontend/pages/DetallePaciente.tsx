@@ -48,7 +48,7 @@ export default function DetallePaciente() {
                     {/* Asignar ejercicios */}
                     <button
                         type="button"
-                        onClick={() => navigate(`/medico/pacient/${pacienteActivo.id}/ejercicios`)}
+                        onClick={() => navigate(`/medico/asignarEjercicio/${pacienteActivo.id}`)}
                         className="flex h-[260px] w-full max-w-[270px] items-center justify-center rounded-xl border-l-[11px] border-[#827d70] bg-gradient-to-b from-[#d6eaff] to-[#9bd2d4] px-4 text-center text-2xl font-bold text-black shadow-md transition-transform hover:scale-[1.03]"
                     >
                         <span className="max-w-[190px] drop-shadow-[2px_3px_2px_rgba(0,0,0,0.45)]">
