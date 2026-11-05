@@ -1,4 +1,4 @@
-import { Navigate, useParams, useNavigate } from 'react-router-dom';
+import { Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import '../css/quieresAsignarlo.css';
 import arrowback from '../img/arrowback (1).png';
@@ -6,9 +6,19 @@ import confirmar from '../img/btn-confirmar (1).png';
 
 export default function QuieresAsignarlo() {
     const { pacienteId, ejercicioId } = useParams<{ pacienteId: string; ejercicioId: string }>();
-    const [ estadoAccion, setEstadoAccion ] = useState<'inicial' | 'exito' | 'error'>('inicial');
-    const [ cargando, setCargando ] = useState(false);
+    const location = useLocation();
     const navigate = useNavigate();
+
+    const [estadoAccion, setEstadoAccion] = useState<'inicial' | 'exito' | 'error'>('inicial');
+    const [cargando, setCargando] = useState(false);
+
+    // Recuperar el ejercicio seleccionado del state de navegación si está disponible
+    const ejercicioData = location.state?.ejercicio;
+    const nombreEjercicio = ejercicioData?.nombre || `Ejercicio ${ejercicioId}`;
+    const descripcionEjercicio = ejercicioData?.descripcion || `Realizar el ejercicio ${ejercicioId}`;
+    const puntajeEjercicio = ejercicioData?.puntaje ?? 10;
+    const tipoEjercicio = ejercicioData?.tipo || 'video';
+    const objetosRequeridos = ejercicioData?.objetosRequeridos || [];
 
     const volverAlInicio = () => {
         navigate('/medico/pacient');
@@ -31,14 +41,20 @@ export default function QuieresAsignarlo() {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    idEjercicio: ejercicioId,
-                    idPaciente: pacienteId
+                    idPaciente: Number(pacienteId),           // Se envía obligatoriamente como número
+                    nombre: nombreEjercicio,                   // Campo requerido por el Backend
+                    descripcion: descripcionEjercicio,         // Campo requerido por el Backend
+                    puntaje: Number(puntajeEjercicio),         // Opcional / número
+                    tipo: tipoEjercicio,                       // 'video' u 'audio'
+                    objetosRequeridos: objetosRequeridos       // Lista de IDs
                 })
             });
 
             if (res.ok) {
                 setEstadoAccion('exito');
             } else {
+                const data = await res.json();
+                console.error("Error en servidor al crear tarea:", data.message);
                 setEstadoAccion('error');
             }
         } catch (error) {
@@ -91,11 +107,11 @@ export default function QuieresAsignarlo() {
                     <img src={arrowback} alt="Volver" />
                 </button>
 
-                <h1>¿Quieres asignar este ejercicio a Ana?</h1>
+                <h1>¿Quieres asignar este ejercicio?</h1>
 
-                {/* Cuadro gris del medio */}
+                {/* Cuadro con el nombre del ejercicio */}
                 <div className="ejercicio-card">
-                    <p>Ejercicio 1</p>
+                    <p>{nombreEjercicio}</p>
                 </div>
 
                 {/* Botón Confirmar con imagen */}
