@@ -1,0 +1,174 @@
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+* {
+    box-sizing: border-box;
+    font-family: 'Atkinson Hyperlegible', sans-serif !important;
+}
+
+/* Contenedor fondo: Asegura que la tarjeta esté centrada */
+.contenedor-fondo-elementos {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    padding: 40px 20px;
+    width: 100%;
+}
+
+/* Tarjeta principal: Controlamos el ancho y el padding */
+.elementos-tarjeta-principal {
+    position: relative;
+    background-color: #92c9cd;
+    width: 95%; 
+    max-width: 1050px; 
+    min-height: 520px;
+    border-radius: 12px;
+    padding: 50px 40px 40px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* ================= HEADER ================= */
+
+.cabecera-elementos {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 60px; /* Margen amplio ya que no hay buscador */
+}
+
+/* Botón de volver (por si lo dejas en el tsx) */
+.btn-volver-elementos {
+    position: absolute;
+    left: 40px;
+    top: 50px; 
+    width: 55px;
+    height: 55px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.2s;
+    padding: 0;
+    z-index: 10;
+}
+
+.btn-volver-elementos img {
+    width: 55px;
+    height: auto;
+}
+
+.btn-volver-elementos:hover {
+    transform: scale(1.1);
+}
+
+.titulo-elementos {
+    font-size: 40px; /* Título un poco más grande y protagonista */
+    font-weight: 700;
+    color: #18243A;
+    margin: 0;
+    text-align: center;
+}
+
+/* ================= CARRUSEL Y GRILLA ================= */
+
+/* Contenedor flex horizontal: Flecha - Grilla - Flecha */
+.carrusel-elementos {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px; 
+    width: 100%;
+    flex-grow: 1; 
+    margin-bottom: 40px; 
+}
+
+/* Flechas */
+.arrow-carrusel {
+    width: 35px;
+    cursor: pointer;
+    flex-shrink: 0; 
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.arrow-backward {
+    transform: scaleX(-1);
+}
+
+.arrow-backward:hover:not(.disabled) {
+    transform: scaleX(-1) scale(1.1);
+}
+
+.arrow-forward:hover:not(.disabled) {
+    transform: scale(1.1);
+}
+
+.arrow-carrusel.disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.grilla-tutoriales {
+    display: flex;
+    gap: 25px; 
+    justify-content: center;
+}
+
+/* Tarjetas (Elementos) */
+.tutorial-card {
+    background: linear-gradient(180deg, #eef3f7 0%, #c3d5e2 100%);
+    width: 200px;
+    height: 270px; 
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; 
+    align-items: center;
+    padding: 35px 20px; 
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.15);
+}
+
+.tutorial-card h2 {
+    font-size: 24px;
+    font-weight: 400;
+    color: #18243A;
+    margin: 0;
+    text-align: center;
+    line-height: 1.2;
+}
+
+/* Botón inferior (imagen "lo tengo") */
+.btn-elemento-img {
+    width: 130px;
+    cursor: pointer;
+    transition: transform 0.2s, filter 0.2s;
+}
+
+.btn-elemento-img:hover {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+}
+
+/* ================= INDICADORES ================= */
+
+.indicadores-carrusel {
+    display: flex;
+    gap: 12px;
+    margin-top: auto; 
+}
+
+.punto {
+    width: 14px;
+    height: 14px;
+    background-color: #d1d5db; /* Gris clarito */
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.punto-activo {
+    background-color: #8c97a1; /* Gris oscuro para la página activa */
+}
