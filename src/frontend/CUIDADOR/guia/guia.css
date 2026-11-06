@@ -25,6 +25,12 @@
     box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
 }
 
+.guia-section p {
+    text-indent: 2rem; /* Esto le da la sangría a la primera línea */
+    margin-bottom: 1rem; /* Esto deja un espacio en blanco entre párrafo y párrafo para que respire */
+    text-align: justify; /* Opcional: probalo si querés que el texto quede alineado como en un libro */
+}
+
 /* Custom Scrollbar */
 .guia-content::-webkit-scrollbar {
     width: 10px;
