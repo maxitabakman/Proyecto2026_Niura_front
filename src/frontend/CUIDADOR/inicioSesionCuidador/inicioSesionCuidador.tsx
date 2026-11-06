@@ -46,15 +46,21 @@ export default function InicioSesionCuidador () {
                 throw new Error(data.message || 'Error al iniciar sesión');
             }
 
+            const userId = data.user?.id ?? data.user?.id_usuario ?? data.user?.usuario_id;
+            if (userId === undefined || userId === null || userId === '') {
+                throw new Error('El servidor no devolvió el ID del usuario');
+            }
+
             // Guardamos el token devuelto
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
+            localStorage.setItem('userId', String(userId));
 
             navigate('/cuidador/paginagralcuidador');
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error en login:', err);
-            setError(err.message || 'Error de conexión con el servidor');
+            setError(err instanceof Error ? err.message : 'Error de conexión con el servidor');
         } finally {
             setCargando(false);
         }

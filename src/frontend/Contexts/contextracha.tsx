@@ -1,15 +1,9 @@
 import { createContext, useContext } from "react";
 
-export interface DiaRacha {
-  fecha: Date;
-  completado: boolean;
-}
-
 export interface RachaContextType {
   rachaActual: number;
-  rachaMaxima: number;
-  historial: DiaRacha[];
-  toggleDia: (fecha: Date) => void; // Permite marcar/desmarcar días
+  cargando: boolean;
+  error: string | null;
 }
 
 export const RachaContext = createContext<RachaContextType | null>(null);

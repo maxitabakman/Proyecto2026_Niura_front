@@ -1,132 +1,137 @@
-import  { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
-// Interface de la respuesta que se espera del backend / Mocky
-interface PatientProgressResponse {
-  racha: number;
-  mejora: number;
-  historial: number[];
+interface ResultadoEvaluado {
+  puntaje: number;
+  fecha: string;
 }
 
-// Datos Mock por defecto (fallback local inmediato)
-const MOCK_INITIAL_DATA: PatientProgressResponse = {
-  racha: 14,
-  mejora: 10,
-  historial: [15, 22, 38, 36, 48, 0, 60, 32, 85]
-};
+interface PatientProgressResponse {
+  racha: number;
+  resultados: ResultadoEvaluado[];
+  message?: string;
+}
 
-// URL de la API de Mocky (reemplazable por tu endpoint real)
-const MOCKY_API_URL = 'https://run.mocky.io/v3/d78216bc-0899-4d64-9be1-332e6ee54d19';
-
-/**
- * Algoritmo Catmull-Rom a Bezier cúbico para generar trazados curvas suaves y
- * naturales en SVG puro a partir de cualquier array de números.
- */
-function generateSmoothSvgPath(
-  data: number[],
-  width: number,
-  height: number,
-  paddingX = 30,
-  paddingY = 25
-): string {
-  if (!data || data.length === 0) return '';
-  if (data.length === 1) {
-    return `M ${paddingX},${height / 2} L ${width - paddingX},${height / 2}`;
-  }
+function generateSmoothSvgPath(data: number[], width: number, height: number): string {
+  if (data.length === 0) return '';
+  if (data.length === 1) return `M 30,${height / 2} L ${width - 30},${height / 2}`;
 
   const minVal = Math.min(0, ...data);
   const maxVal = Math.max(100, ...data);
   const range = maxVal - minVal || 1;
-
-  // Convertimos cada número del array a coordenadas XY
-  const points = data.map((val, i) => {
-    const x = paddingX + (i / (data.length - 1)) * (width - 2 * paddingX);
-    const y = (height - paddingY) - ((val - minVal) / range) * (height - 2 * paddingY);
-    return { x, y };
-  });
-
+  const points = data.map((value, index) => ({
+    x: 30 + (index / (data.length - 1)) * (width - 60),
+    y: height - 25 - ((value - minVal) / range) * (height - 50),
+  }));
   let path = `M ${points[0].x.toFixed(1)},${points[0].y.toFixed(1)}`;
 
-  // Trazado de Bezier suavizado
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i === 0 ? i : i - 1];
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
-
+  for (let index = 0; index < points.length - 1; index++) {
+    const p0 = points[index === 0 ? index : index - 1];
+    const p1 = points[index];
+    const p2 = points[index + 1];
+    const p3 = points[index + 2] ?? points[index + 1];
     const cp1x = p1.x + (p2.x - p0.x) / 6;
     const cp1y = p1.y + (p2.y - p0.y) / 6;
-
     const cp2x = p2.x - (p3.x - p1.x) / 6;
     const cp2y = p2.y - (p3.y - p1.y) / 6;
-
     path += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
   }
-
   return path;
 }
 
 export default function PatientProgressScreen() {
-  const [patientData, setPatientData] = useState<PatientProgressResponse>(MOCK_INITIAL_DATA);
-  const [loading, setLoading] = useState<boolean>(false);
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [patientData, setPatientData] = useState<PatientProgressResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Carga de datos desde API / Mocky
   useEffect(() => {
-    const fetchPatientProgress = async () => {
-      setLoading(true);
+    const token = localStorage.getItem('token');
+    if (!token || !id) return;
+
+    const controller = new AbortController();
+    async function fetchPatientProgress() {
       try {
-        const res = await fetch(MOCKY_API_URL);
-        if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
-        const json: PatientProgressResponse = await res.json();
-        setPatientData(json);
-      } catch (err) {
-        console.warn('Servidor Mocky no disponible. Usando datos locales por defecto.', err);
-        setPatientData(MOCK_INITIAL_DATA);
+        const response = await fetch(
+          `http://localhost:3000/doctor/progresoPaciente/${id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          },
+        );
+        const data: PatientProgressResponse = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || `El servidor respondió ${response.status}.`);
+        }
+        if (typeof data.racha !== 'number' || !Array.isArray(data.resultados)) {
+          throw new Error('El servidor devolvió datos de progreso inválidos.');
+        }
+        setPatientData(data);
+        setError('');
+      } catch (fallo) {
+        if (controller.signal.aborted) return;
+        console.error('Error al cargar el progreso del paciente:', fallo);
+        setError(
+          fallo instanceof Error
+            ? fallo.message
+            : 'No se pudo cargar el progreso del paciente.',
+        );
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
-    };
+    }
 
-    fetchPatientProgress();
-  }, []);
+    void fetchPatientProgress();
+    return () => controller.abort();
+  }, [id]);
 
-  // Gráfico ajustado a 800x190
-  const svgPath = generateSmoothSvgPath(patientData.historial, 800, 190);
+  const resultados = patientData?.resultados ?? [];
+  const svgPath = generateSmoothSvgPath(
+    resultados.map((resultado) => resultado.puntaje),
+    800,
+    190,
+  );
 
   return (
-    <div className="">      
-      {/* Contenido principal reducido a max-w-2xl */}
-      <div className="w-full max-w-2xl space-y-5 flex flex-col justify-center">
-        
-        {/* Encabezado: Botón volver + Título */}
+    <div>
+      <div className="flex w-full max-w-2xl flex-col justify-center space-y-5">
         <div className="relative flex items-center justify-center">
           <button
-            onClick={() => window.history.back()}
-            className="absolute left-0 w-9 h-9 rounded-full border border-black flex items-center justify-center hover:bg-black/10 active:scale-95 transition-all"
+            type="button"
+            onClick={() => navigate(-1)}
+            className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full border border-black transition-all hover:bg-black/10 active:scale-95"
             title="Volver"
             aria-label="Volver"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
             </svg>
           </button>
-
-          <h1 className="text-xl md:text-2xl font-bold text-center tracking-tight text-black">
-            Progreso del paciente:
+          <h1 className="text-center text-xl font-bold tracking-tight text-black md:text-2xl">
+            Progreso del paciente
           </h1>
         </div>
 
-        {/* Marco del gráfico (Altura compacta: ~180px) */}
-        <div className="w-full bg-[#d8e5ed] border-2 border-[#f5a623] rounded-xl p-3 shadow-[0px_4px_4px_0px_#00000040] relative overflow-hidden">
+        <div className="relative overflow-hidden rounded-xl border-2 border-[#f5a623] bg-[#d8e5ed] p-3 shadow-[0px_4px_4px_0px_#00000040]">
           {loading ? (
-            <div className="h-40 flex items-center justify-center text-gray-700 text-sm font-medium">
+            <div className="flex h-40 items-center justify-center text-sm font-medium text-gray-700">
               Cargando datos del paciente...
             </div>
+          ) : error ? (
+            <p className="p-4 text-center text-red-800" role="alert">{error}</p>
+          ) : resultados.length === 0 ? (
+            <p className="p-4 text-center text-gray-700">
+              Todavía no hay resultados evaluados para mostrar.
+            </p>
           ) : (
-            <div className="w-full h-36 md:h-44 flex items-center justify-center">
+            <div className="flex h-36 w-full items-center justify-center md:h-44">
               <svg
                 viewBox="0 0 800 190"
-                className="w-full h-full overflow-visible"
+                className="h-full w-full overflow-visible"
                 preserveAspectRatio="none"
+                aria-label="Resultados evaluados a lo largo del tiempo"
+                role="img"
               >
                 <path
                   d={svgPath}
@@ -141,23 +146,21 @@ export default function PatientProgressScreen() {
           )}
         </div>
 
-        {/* Texto reducido a proporciones estándar */}
-        <p className="text-center text-base md:text-lg font-normal text-black tracking-tight px-2">
+        <p className="px-2 text-center text-base font-normal tracking-tight text-black md:text-lg">
           El paciente lleva una racha de{' '}
-          <span className="font-semibold">{patientData.racha}</span> días, y ha mejorado en general un{' '}
-          <span className="font-semibold">{patientData.mejora}%</span>.
+          <span className="font-semibold">{patientData?.racha ?? 0}</span> días.
+          {patientData && ` Hay ${resultados.length} resultados evaluados registrados.`}
         </p>
 
-        {/* Botón centrado más compacto */}
         <div className="flex justify-center pt-1">
           <button
-            onClick={() => console.log('Asignar nuevos ejercicios')}
-            className="bg-gradient-to-b from-[#a3d5e8] via-[#75bcdb] to-[#519fbf] hover:from-[#92cae0] hover:to-[#428ea3] text-black font-bold text-base md:text-lg px-7 py-2.5 md:py-3 rounded-xl shadow-[0px_4px_4px_0px_#00000040] border border-[#5a9ebb]/30 active:scale-95 transition-all text-center leading-tight"
+            type="button"
+            onClick={() => id && navigate(`/medico/asignarEjercicio/${id}`)}
+            className="rounded-xl border border-[#5a9ebb]/30 bg-gradient-to-b from-[#a3d5e8] via-[#75bcdb] to-[#519fbf] px-7 py-2.5 text-center text-base font-bold leading-tight text-black shadow-[0px_4px_4px_0px_#00000040] transition-all hover:from-[#92cae0] hover:to-[#428ea3] active:scale-95 md:py-3 md:text-lg"
           >
             Asignar nuevos ejercicios
           </button>
         </div>
-
       </div>
     </div>
   );

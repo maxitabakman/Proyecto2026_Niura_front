@@ -3,7 +3,7 @@ import { useRacha } from "../Contexts/contextracha";
 
 export default function ListaRacha (){
   // Consumimos los datos del contexto de la racha
-  const { rachaActual, historial } = useRacha();
+  const { rachaActual, cargando, error } = useRacha();
 
   // Objetivo temporal: llegar a los 30 días
   const proximoObjetivo = 30;
@@ -14,12 +14,6 @@ export default function ListaRacha (){
   // Estimamos las semanas suponiendo que se completa un día por día
   const semanasRestantes = Math.ceil(diasRestantes / 7);
 
-  // Conservamos el historial disponible para futuras estadísticas.
-  // La estimación actual usa la racha actual y el objetivo temporal.
-  const diasCompletados = historial.filter(
-    (dia) => dia.completado
-  ).length;
-console.log( diasCompletados);
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#a3d5df] to-[#d3e1f5] px-4 pt-[60px]">
       {/* Panel principal */}
@@ -27,8 +21,9 @@ console.log( diasCompletados);
 
         {/* Título de la racha */}
         <h1 className="text-center text-2xl font-bold leading-tight text-[#34445f] sm:text-[34px]">
-          Llevas una racha de {rachaActual} días
+          {cargando ? 'Cargando racha...' : `Llevas una racha de ${rachaActual} días`}
         </h1>
+        {error && <p role="alert" className="mt-4 text-center text-red-800">{error}</p>}
 
         {/* Rectángulo celeste vacío */}
         <div

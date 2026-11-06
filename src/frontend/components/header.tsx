@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useRacha } from '../Contexts/contextracha';
@@ -55,15 +56,16 @@ interface NavItemMedicoProps {
   onClick: () => void;
   icono: string;
   label: string;
+  children?: ReactNode;
 }
 
-function NavItemMedico({ activo, onClick, icono, label }: NavItemMedicoProps) {
+function NavItemMedico({ activo, onClick, icono, label, children }: NavItemMedicoProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
-      className={`flex items-center gap-[calc(var(--u)*8)] text-[length:max(12px,calc(var(--u)*16))] leading-none transition-all cursor-pointer ${
+      className={`relative flex items-center gap-[calc(var(--u)*8)] text-[length:max(12px,calc(var(--u)*16))] leading-none transition-all cursor-pointer ${
         activo ? 'scale-105' : 'opacity-90 hover:opacity-100 hover:scale-105'
       }`}
     >
@@ -73,6 +75,7 @@ function NavItemMedico({ activo, onClick, icono, label }: NavItemMedicoProps) {
         className="h-[max(16px,calc(var(--u)*20))] w-[max(16px,calc(var(--u)*20))]"
       />
       {label}
+      {children}
     </button>
   );
 }
@@ -82,6 +85,88 @@ export default function Header() {
   const { pathname: rutaActual } = useLocation();
   // Los hooks tienen que llamarse siempre, fuera de los if (regla de hooks de React).
   const rachaActual = useRacha();
+  const [contadorNav, setContadorNav] = useState(0);
+
+  useEffect(() => {
+    const esPaciente = rutaActual.startsWith('/paciente/');
+    const esMedico = rutaActual.startsWith('/medico/');
+    const esCuidador = rutaActual.startsWith('/cuidador/');
+    if (!esPaciente && !esMedico && !esCuidador) return;
+
+    const controlador = new AbortController();
+    const cargarSolicitudesPendientes = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setContadorNav(0);
+        return;
+      }
+
+      try {
+        if (esMedico || esCuidador) {
+          const baseNotificaciones = esMedico
+            ? 'http://localhost:3000/doctor/notificaciones'
+            : 'http://localhost:3000/acompanante/notificaciones';
+          const respuesta = await fetch(
+            `${baseNotificaciones}/contador`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+              signal: controlador.signal,
+            },
+          );
+          const datos: { message?: string; noLeidas?: number } = await respuesta.json();
+          if (!respuesta.ok || typeof datos.noLeidas !== 'number') {
+            throw new Error(datos.message || 'No se pudo consultar el contador de notificaciones.');
+          }
+          if (!controlador.signal.aborted) setContadorNav(datos.noLeidas);
+          return;
+        }
+
+        const rutas = ['verInvitacionesDoctor', 'verInvitacionesAcompanante'];
+        const respuestas = await Promise.all(
+          rutas.map(async (ruta) => {
+            const respuesta = await fetch(
+              `http://localhost:3000/paciente/${ruta}`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+                signal: controlador.signal,
+              },
+            );
+            const datos: unknown = await respuesta.json();
+            if (!respuesta.ok) {
+              throw new Error(`No se pudieron consultar las solicitudes (${respuesta.status}).`);
+            }
+            if (
+              typeof datos !== 'object' ||
+              datos === null ||
+              !('invitaciones' in datos) ||
+              !Array.isArray(datos.invitaciones)
+            ) {
+              throw new Error('El servidor devolvió una lista de solicitudes inválida.');
+            }
+            return datos.invitaciones.length;
+          }),
+        );
+
+        if (!controlador.signal.aborted) {
+          setContadorNav(respuestas.reduce((total, cantidad) => total + cantidad, 0));
+        }
+      } catch (error) {
+        if (!controlador.signal.aborted) {
+          console.error('Error al actualizar el contador de solicitudes:', error);
+        }
+      }
+    };
+
+    void cargarSolicitudesPendientes();
+    const intervalo = window.setInterval(() => void cargarSolicitudesPendientes(), 30_000);
+    window.addEventListener('focus', cargarSolicitudesPendientes);
+
+    return () => {
+      controlador.abort();
+      window.clearInterval(intervalo);
+      window.removeEventListener('focus', cargarSolicitudesPendientes);
+    };
+  }, [rutaActual]);
 
   if (rutaActual.includes('paciente')) {
     return (
@@ -124,7 +209,18 @@ export default function Header() {
             alt="Noticias"
             activo={rutaActual === '/paciente/notificaciones'}
             onClick={() => navigate('/paciente/notificaciones')}
-          />
+          >
+            {rutaActual.startsWith('/paciente/') &&
+              Boolean(localStorage.getItem('token')) &&
+              contadorNav > 0 && (
+              <span
+                aria-label={`${contadorNav} solicitudes pendientes`}
+                className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border border-white bg-red-600 px-1 text-xs font-bold text-white"
+              >
+                {contadorNav > 9 ? '9+' : contadorNav}
+              </span>
+            )}
+          </NavItem>
 
           <NavItem
             src={tuRedImg}
@@ -163,7 +259,16 @@ export default function Header() {
             label="notificaciones"
             activo={rutaActual === '/medico/noticias'}
             onClick={() => navigate('/medico/noticias')}
-          />
+          >
+            {contadorNav > 0 && (
+              <span
+                aria-label={`${contadorNav} notificaciones sin leer`}
+                className="absolute -right-3 -top-3 flex min-h-5 min-w-5 items-center justify-center rounded-full border border-white bg-red-600 px-1 text-xs font-bold text-white"
+              >
+                {contadorNav > 9 ? '9+' : contadorNav}
+              </span>
+            )}
+          </NavItemMedico>
 
           <NavItemMedico
             icono="mdi:share-variant-outline"
@@ -201,7 +306,16 @@ export default function Header() {
             label="notificaciones"
             activo={rutaActual === '/cuidador/noticias'}
             onClick={() => navigate('/cuidador/noticias')}
-          />
+          >
+            {contadorNav > 0 && (
+              <span
+                aria-label={`${contadorNav} notificaciones sin leer`}
+                className="absolute -right-3 -top-3 flex min-h-5 min-w-5 items-center justify-center rounded-full border border-white bg-red-600 px-1 text-xs font-bold text-white"
+              >
+                {contadorNav > 9 ? '9+' : contadorNav}
+              </span>
+            )}
+          </NavItemMedico>
 
           <NavItemMedico
             icono="mdi:share-variant-outline"

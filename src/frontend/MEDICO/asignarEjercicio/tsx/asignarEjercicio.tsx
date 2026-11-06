@@ -6,7 +6,7 @@ import flecha from '../../../PACIENTE/seleccionVIDEO/flecha.png';
 import flechaSiguiente from '../../../PACIENTE/seleccionEjercicio/arrowback.png';
 import lupa from '../img/boxicons_search-alt.png';
 import '../css/asignarEjercicio.css';
-import botonCrear from '../img/btn-crea.png'
+import botonCrear from '../img/btn-crea.png';
 
 export default function AsignarEjercicio() {
     const [ejercicios, setEjercicios] = useState<Ejercicios[]>([]);
@@ -77,8 +77,11 @@ export default function AsignarEjercicio() {
         if (paginaActual < totalPaginas - 1) setPaginaActual(paginaActual + 1);
     };
 
-    const handleNavigate = (id: number | string) => {
-        navigate(`/medico/quieresAsignar/${pacienteId}/${id}`);
+    // Pasa los datos del ejercicio a QuieresAsignarlo
+    const handleNavigate = (ejercicio: Ejercicios) => {
+        navigate(`/medico/quieresAsignar/${pacienteId}/${ejercicio.id}`, {
+            state: { ejercicio }
+        });
     };
 
     const handleNavigateCrearEjercicio = () => {
@@ -132,7 +135,7 @@ export default function AsignarEjercicio() {
                             carruselElementos.map((ejercicio) => (
                                 <div key={ejercicio.id} className="CardPendiente">
                                     <h3 className="titulo-ejercicio">{ejercicio.nombre}</h3>
-                                    <button className="botonAsignar" onClick={() => handleNavigate(ejercicio.id)}>
+                                    <button className="botonAsignar" onClick={() => handleNavigate(ejercicio)}>
                                         Asignar
                                     </button>
                                 </div>

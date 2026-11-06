@@ -13,31 +13,19 @@ const estiloEscala = {
   "--u": `max(0.55px, calc(min(100vw / 1366, 100vh / 768) * ${ESCALA}))`,
 } as CSSProperties;
 
-/* Endpoint que devuelve el perfil. Debe responder un JSON así:
-   { "correo": "alguien@mail.com", "imagen": "https://...jpg" }
-   ("imagen" puede venir vacía o no venir si la persona no tiene foto). */
-const URL_PERFIL = "https://mocki.io/v1/fd125f8b-20ed-4509-8051-f34005b873d8";
-
-/* Endpoint que cambia el correo. */
-const URL_CAMBIAR_CORREO =
-  "http://localhost:3000/paciente/cambiarCorreo"; // Cambialo por tu back real
-
-/* Endpoint para subir la foto */
-const URL_SUBIR_FOTO = "https://mocki.io/v1/d42ede49-cf64-42f1-8da6-d7f40d7236b5";
-
-/* Validación simple de formato; la validación real la hace el back. */
+const URL_CAMBIAR_CORREO = "http://localhost:3000/paciente/cambiarCorreo";
+const URL_PERFIL_PACIENTE = "http://localhost:3000/paciente/verDatosPaciente";
+const URL_SUBIR_FOTO = "http://localhost:3000/videos/subirFotoPerfil";
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type EstadoPerfil = "cargando" | "listo" | "error";
+type EstadoPerfil = "listo" | "error";
 type EstadoEnvio = "reposo" | "enviando" | "exito" | "error";
-
-// Sube la foto como archivo (multipart/form-data)
-async function subirFoto(usuario: string, archivo: File) {
-  const datos = new FormData();
-  datos.append("usuario", usuario);
-  datos.append("imagen", archivo);
-  const respuesta = await fetch(URL_SUBIR_FOTO, { method: "POST", body: datos });
-  if (!respuesta.ok) throw new Error(`El servidor respondió ${respuesta.status}`);
+interface UsuarioSesion {
+  id?: number | string;
+  nombre?: string;
+  apellido?: string;
+  email?: string;
+  foto?: string;
 }
 
 function IconoCambiar(): ReactNode {
@@ -72,15 +60,30 @@ const CLASE_TARJETA =
 export default function PerfilPaciente() {
   const navigate = useNavigate();
   const { nombre } = usePaciente();
+  const [usuarioSesion, setUsuarioSesion] = useState<UsuarioSesion | null>(() => {
+    try {
+      const usuario = localStorage.getItem("user");
+      return usuario ? JSON.parse(usuario) as UsuarioSesion : null;
+    } catch {
+      return null;
+    }
+  });
+  const nombreMostrar = nombre || [usuarioSesion?.nombre, usuarioSesion?.apellido]
+    .filter(Boolean)
+    .join(" ");
+  const idPaciente = localStorage.getItem("userId") || String(usuarioSesion?.id || "");
 
   const idInput = useId();
   const idMensaje = useId();
+  const [estadoCopiaId, setEstadoCopiaId] = useState("");
 
   // Datos que vienen del back
-  const [correoActual, setCorreoActual] = useState("");
-  const [fotoUrl, setFotoUrl] = useState<string | null>(null);
-  const [estadoPerfil, setEstadoPerfil] = useState<EstadoPerfil>("cargando");
-  const [intento, setIntento] = useState(0);
+  const correoActual = usuarioSesion?.email || "";
+  const [fotoUrl, setFotoUrl] = useState<string | null>(() => usuarioSesion?.foto || null);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const [mensajeFoto, setMensajeFoto] = useState("");
+  const [errorFoto, setErrorFoto] = useState(false);
+  const estadoPerfil: EstadoPerfil = correoActual ? "listo" : "error";
 
   // Edición de correo
   const [editando, setEditando] = useState(false);
@@ -90,57 +93,100 @@ export default function PerfilPaciente() {
 
   const enviando = estadoEnvio === "enviando";
 
-  /* ---------- Cargar perfil (correo + imagen) al entrar ---------- */
   useEffect(() => {
-    if (!nombre) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-    const controlador = new AbortController();
-    setEstadoPerfil("cargando");
-
-    (async () => {
+    let activo = true;
+    async function cargarPerfil() {
       try {
-        const respuesta = await fetch(
-          `${URL_PERFIL}?usuario=${encodeURIComponent(nombre)}`,
-          { signal: controlador.signal },
-        );
-        if (!respuesta.ok) throw new Error(`Estado ${respuesta.status}`);
-
-        const datos: unknown = await respuesta.json();
-        const { correo, imagen } = (datos ?? {}) as {
-          correo?: unknown;
-          imagen?: unknown;
-        };
-
-        if (typeof correo !== "string" || !correo) {
-          throw new Error("Respuesta sin correo");
+        const respuesta = await fetch(URL_PERFIL_PACIENTE, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const cuerpo: { message?: string; datos?: UsuarioSesion } = await respuesta.json();
+        if (!respuesta.ok || !cuerpo.datos) {
+          throw new Error(cuerpo.message || `El servidor respondió ${respuesta.status}`);
         }
+        if (!activo) return;
 
-        setCorreoActual(correo);
-        setFotoUrl(typeof imagen === "string" && imagen ? imagen : null);
-        setEstadoPerfil("listo");
-      } catch {
-        if (controlador.signal.aborted) return;
-        setEstadoPerfil("error");
+        const usuarioActualizado = cuerpo.datos;
+        setUsuarioSesion(usuarioActualizado);
+        setFotoUrl(usuarioActualizado.foto || null);
+        localStorage.setItem("user", JSON.stringify(usuarioActualizado));
+      } catch (error) {
+        if (!activo) return;
+        console.error("Error al cargar el perfil del paciente:", error);
+        setErrorFoto(true);
+        setMensajeFoto("No se pudo cargar la foto del perfil.");
       }
-    })();
+    }
 
-    return () => controlador.abort();
-  }, [nombre, intento]);
+    void cargarPerfil();
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  async function copiarIdPaciente() {
+    if (!idPaciente) return;
+    try {
+      await navigator.clipboard.writeText(idPaciente);
+      setEstadoCopiaId("ID copiado.");
+    } catch (error) {
+      console.error("No se pudo copiar el ID del paciente:", error);
+      setEstadoCopiaId("No se pudo copiar. Compartí el ID manualmente.");
+    }
+  }
 
   /* ---------- Subir / Cambiar Foto ---------- */
-  function cambiarFoto(e: ChangeEvent<HTMLInputElement>) {
+  async function cambiarFoto(e: ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0];
     e.target.value = ""; // Permite volver a seleccionar el mismo archivo si es necesario
     if (!archivo) return;
 
     // Validación de tipo de archivo y tamaño (máx 5MB)
-    if (!archivo.type.startsWith("image/") || archivo.size > 5 * 1024 * 1024) return;
+    if (!archivo.type.startsWith("image/") || archivo.size > 5 * 1024 * 1024) {
+      setErrorFoto(true);
+      setMensajeFoto("Elegí una imagen válida de hasta 5 MB.");
+      return;
+    }
 
-    // Muestra la vista previa local inmediatamente
-    setFotoUrl(URL.createObjectURL(archivo));
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setErrorFoto(true);
+      setMensajeFoto("Tu sesión venció. Volvé a iniciar sesión para cambiar la foto.");
+      return;
+    }
 
-    // Envía la imagen al servidor
-    subirFoto(nombre, archivo).catch(console.error);
+    const formulario = new FormData();
+    formulario.append("imagen", archivo);
+    setSubiendoFoto(true);
+    setErrorFoto(false);
+    setMensajeFoto("");
+
+    try {
+      const respuesta = await fetch(URL_SUBIR_FOTO, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formulario,
+      });
+      const cuerpo: { message?: string; foto?: string } = await respuesta.json();
+      if (!respuesta.ok || !cuerpo.foto) {
+        throw new Error(cuerpo.message || `El servidor respondió ${respuesta.status}`);
+      }
+
+      const usuarioActualizado = { ...usuarioSesion, foto: cuerpo.foto };
+      setUsuarioSesion(usuarioActualizado);
+      setFotoUrl(cuerpo.foto);
+      localStorage.setItem("user", JSON.stringify(usuarioActualizado));
+      setMensajeFoto("Foto de perfil actualizada.");
+    } catch (error) {
+      console.error("Error al subir la foto del paciente:", error);
+      setErrorFoto(true);
+      setMensajeFoto(error instanceof Error ? error.message : "No se pudo subir la foto. Probá de nuevo.");
+    } finally {
+      setSubiendoFoto(false);
+    }
   }
 
   /* ---------- Cambio de correo ---------- */
@@ -180,21 +226,20 @@ export default function PerfilPaciente() {
 
     try {
       const respuesta = await fetch(URL_CAMBIAR_CORREO, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nuevoCorreo: correoLimpio }),
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+        },
+        body: JSON.stringify({ email: correoLimpio }),
       });
 
-      if (!respuesta.ok) {
-        throw new Error(`El servidor respondió ${respuesta.status}`);
-      }
+      const cuerpo: { message?: string; email?: string } = await respuesta.json();
+      if (!respuesta.ok) throw new Error(cuerpo.message || `El servidor respondió ${respuesta.status}`);
 
-      const cuerpo: unknown = await respuesta.json();
-      if ((cuerpo as { data?: unknown } | null)?.data !== "ok") {
-        throw new Error("Respuesta inesperada del servidor");
-      }
-
-      setCorreoActual(correoLimpio);
+      const nuevoUsuarioSesion = { ...usuarioSesion, email: cuerpo.email || correoLimpio };
+      setUsuarioSesion(nuevoUsuarioSesion);
+      localStorage.setItem("user", JSON.stringify(nuevoUsuarioSesion));
       setEditando(false);
       setEstadoEnvio("exito");
       setMensaje("Correo actualizado.");
@@ -205,7 +250,7 @@ export default function PerfilPaciente() {
     }
   }
 
-  if (!nombre) {
+  if (!nombreMostrar) {
     return (
       <section
         style={estiloEscala}
@@ -240,21 +285,12 @@ export default function PerfilPaciente() {
         <div className="order-2 flex w-full flex-col items-center md:order-1 md:w-auto md:items-start">
           <div className="text-center md:w-[calc(var(--u)*246)]">
             <h1 className="text-[length:calc(var(--u)*36)] font-bold leading-tight text-[#dbe7fb]">
-              {nombre}
+              {nombreMostrar}
             </h1>
             <p className="text-[length:calc(var(--u)*24)] leading-tight text-[#dbe7fb]">
               Paciente
             </p>
           </div>
-
-          {estadoPerfil === "cargando" && (
-            <p
-              role="status"
-              className="mt-[calc(var(--u)*40)] text-[length:calc(var(--u)*24)] text-[#8fa6c7]"
-            >
-              Cargando tu perfil…
-            </p>
-          )}
 
           {estadoPerfil === "error" && (
             <div className="mt-[calc(var(--u)*40)] flex flex-col items-center gap-[calc(var(--u)*12)] md:items-start">
@@ -266,17 +302,40 @@ export default function PerfilPaciente() {
               </p>
               <button
                 type="button"
-                onClick={() => setIntento((n) => n + 1)}
+                onClick={() => navigate("/elegirinicio")}
                 className={CLASE_BOTON_SECUNDARIO}
               >
-                Reintentar
+                Iniciar sesión nuevamente
               </button>
             </div>
           )}
 
           {estadoPerfil === "listo" && (
             <>
-              <p className="mt-[calc(var(--u)*40)] break-all text-[length:calc(var(--u)*24)] text-[#dbe7fb] md:break-normal">
+          {idPaciente && (
+            <div className="mt-[calc(var(--u)*22)] flex flex-wrap items-center gap-[calc(var(--u)*12)] text-[length:calc(var(--u)*20)] text-[#dbe7fb]">
+              <span>
+                <strong>Tu ID para solicitudes</strong>: {idPaciente}
+              </span>
+              <button
+                type="button"
+                onClick={() => void copiarIdPaciente()}
+                className={CLASE_BOTON_SECUNDARIO}
+              >
+                Copiar ID
+              </button>
+              {estadoCopiaId && (
+                <span role="status" className="basis-full text-[length:calc(var(--u)*16)]">
+                  {estadoCopiaId}
+                </span>
+              )}
+              <span className="basis-full text-[length:calc(var(--u)*16)] text-[#8fa6c7]">
+                Compartilo con tu médico o acompañante para que pueda enviarte una solicitud.
+              </span>
+            </div>
+          )}
+
+          <p className="mt-[calc(var(--u)*40)] break-all text-[length:calc(var(--u)*24)] text-[#dbe7fb] md:break-normal">
                 <strong>Correo</strong>: {correoActual}
               </p>
 
@@ -348,32 +407,50 @@ export default function PerfilPaciente() {
         </div>
 
         {/* ---------- Foto (Interactiva para cargar / cambiar) ---------- */}
-        <label
-          title={fotoUrl ? "Cambiar foto" : "Agregar foto"}
-          className="order-1 flex h-[calc(var(--u)*200)] w-[calc(var(--u)*200)] min-h-[100px] min-w-[100px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-black bg-[#d9d9d9] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-white md:order-2"
-        >
-          {fotoUrl ? (
-            <img
-              src={fotoUrl}
-              alt={`Foto de ${nombre}`}
-              onError={() => setFotoUrl(null)}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            estadoPerfil !== "cargando" && (
+        <div className="order-1 flex flex-col items-center gap-[calc(var(--u)*8)] md:order-2">
+          <label
+            title={fotoUrl ? "Cambiar foto" : "Agregar foto"}
+            className={`flex h-[calc(var(--u)*200)] w-[calc(var(--u)*200)] min-h-[100px] min-w-[100px] shrink-0 items-center justify-center overflow-hidden rounded-full border border-black bg-[#d9d9d9] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-white ${
+              subiendoFoto ? "cursor-wait opacity-70" : "cursor-pointer"
+            }`}
+          >
+            {fotoUrl ? (
+              <img
+                src={fotoUrl}
+                alt={`Foto de ${nombreMostrar}`}
+                onError={() => setFotoUrl(null)}
+                className="h-full w-full object-cover"
+              />
+            ) : (
               <span aria-hidden="true" className="text-[length:calc(var(--u)*90)] font-light leading-none text-[#4b5c78]">
                 +
               </span>
-            )
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={cambiarFoto}
+              disabled={subiendoFoto}
+              aria-label={fotoUrl ? "Cambiar foto de perfil" : "Agregar foto de perfil"}
+              className="sr-only"
+            />
+          </label>
+          {subiendoFoto && (
+            <p className="text-[length:calc(var(--u)*14)] text-[#dbe7fb]" role="status">
+              Subiendo foto...
+            </p>
           )}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={cambiarFoto}
-            aria-label={fotoUrl ? "Cambiar foto de perfil" : "Agregar foto de perfil"}
-            className="sr-only"
-          />
-        </label>
+          {mensajeFoto && !subiendoFoto && (
+            <p
+              className={`max-w-[calc(var(--u)*240)] text-center text-[length:calc(var(--u)*14)] ${
+                errorFoto ? "text-[#ffb4b4]" : "text-[#a9e6b8]"
+              }`}
+              role={errorFoto ? "alert" : "status"}
+            >
+              {mensajeFoto}
+            </p>
+          )}
+        </div>
       </div>
     </section>
   );
