@@ -1,7 +1,13 @@
 import { createContext, useContext } from "react";
 
+export interface ResultadoEvaluado {
+  puntaje: number;
+  fecha: string;
+}
+
 export interface RachaContextType {
   rachaActual: number;
+  resultados: ResultadoEvaluado[];
   cargando: boolean;
   error: string | null;
 }

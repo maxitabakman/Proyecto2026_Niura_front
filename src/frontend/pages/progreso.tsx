@@ -12,6 +12,24 @@ interface PatientProgressResponse {
   message?: string;
 }
 
+function promediarPorDia(resultados: ResultadoEvaluado[]): number[] {
+  const porDia = new Map<string, { suma: number; cantidad: number }>();
+
+  for (const item of resultados) {
+    const claveDia = item.fecha ? item.fecha.split('T')[0].split(' ')[0] : 'dia';
+    const puntaje = Number(item.puntaje);
+    if (!Number.isFinite(puntaje)) continue;
+
+    const actual = porDia.get(claveDia) ?? { suma: 0, cantidad: 0 };
+    porDia.set(claveDia, {
+      suma: actual.suma + puntaje,
+      cantidad: actual.cantidad + 1,
+    });
+  }
+
+  return Array.from(porDia.values()).map(({ suma, cantidad }) => suma / cantidad);
+}
+
 function generateSmoothSvgPath(data: number[], width: number, height: number): string {
   if (data.length === 0) return '';
   if (data.length === 1) return `M 30,${height / 2} L ${width - 30},${height / 2}`;
@@ -87,11 +105,8 @@ export default function PatientProgressScreen() {
   }, [id]);
 
   const resultados = patientData?.resultados ?? [];
-  const svgPath = generateSmoothSvgPath(
-    resultados.map((resultado) => resultado.puntaje),
-    800,
-    190,
-  );
+  const promediosDiarios = promediarPorDia(resultados);
+  const svgPath = generateSmoothSvgPath(promediosDiarios, 800, 190);
 
   return (
     <div>
@@ -120,7 +135,7 @@ export default function PatientProgressScreen() {
             </div>
           ) : error ? (
             <p className="p-4 text-center text-red-800" role="alert">{error}</p>
-          ) : resultados.length === 0 ? (
+          ) : promediosDiarios.length === 0 ? (
             <p className="p-4 text-center text-gray-700">
               Todavía no hay resultados evaluados para mostrar.
             </p>
