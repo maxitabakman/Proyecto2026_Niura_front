@@ -64,8 +64,8 @@ export default function SubirArchivoAudio() {
             formData.append('audio', archivo);
             formData.append('tareaID', id);
 
-            const response = await fetch('http://localhost:3000/videos/subirAudioPaciente', {
-                method: 'POST',
+            const response = await fetch(`http://localhost:3000/paciente/completarTarea/${id}`, {
+                method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
                 body: formData,
             });

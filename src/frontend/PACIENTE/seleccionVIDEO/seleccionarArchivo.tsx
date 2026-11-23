@@ -20,6 +20,7 @@ export default function SubirArchivo() {
     const [archivo, setArchivo] = useState<File | null>(null);
     const [estado, setEstado] = useState<EstadoPantalla>('seleccion');
     const [cargando, setCargando] = useState<boolean>(false);
+    const [brazo, setBrazo] = useState<'derecho' | 'izquierdo'>('derecho');
 
     const navigate = useNavigate();
 
@@ -62,11 +63,12 @@ export default function SubirArchivo() {
         try {
             // 2. Construimos FormData enviando el video y el :id de la URL como 'tareaID'
             const formData = new FormData();
+            formData.append('brazo', brazo);
             formData.append('video', archivo);
             formData.append('tareaID', id);
 
-            const response = await fetch('http://localhost:3000/videos/subirVideoPaciente', {
-                method: 'POST',
+            const response = await fetch(`http://localhost:3000/paciente/completarTarea/${id}`, {
+                method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -119,6 +121,11 @@ export default function SubirArchivo() {
                         {videoPrevisualizado && (
                             <video className="video-preview" controls src={videoPrevisualizado} />
                         )}
+
+                        <label>
+                            ¿Con que brazo hiciste el ejercicio?{' '}
+                            <select value={brazo} onChange={(e) => setBrazo(e.target.value as 'derecho' | 'izquierdo')} disabled= {cargando}></select>
+                        </label>
 
                         <img 
                             src={confirmar} 

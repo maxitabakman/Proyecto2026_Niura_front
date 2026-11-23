@@ -3,6 +3,8 @@ import { useState } from 'react';
 import '../css/quieresAsignarlo.css';
 import arrowback from '../img/arrowback (1).png';
 import confirmar from '../img/btn-confirmar (1).png';
+import error from '../img/error.png'
+import asignado from '../img/asignado.png'
 
 export default function QuieresAsignarlo() {
     const { pacienteId, ejercicioId } = useParams<{ pacienteId: string; ejercicioId: string }>();
@@ -75,7 +77,7 @@ export default function QuieresAsignarlo() {
                 <div className='exitoso'>
                     <h1 className='asignadoCorrectamente'>El ejercicio fue asignado</h1>
                     <p className='habilitado'>Será habilitado a la brevedad</p>
-                    <img className='imagenConfirmar' src="./asignado.png" alt="Confirmación" />
+                    <img className='imagenConfirmar' src={asignado} alt="Confirmación" />
                     <button className='botonVolverInicio' onClick={volverAlInicio}>
                         Volver al inicio
                     </button>
@@ -90,7 +92,7 @@ export default function QuieresAsignarlo() {
                 <div className='noExitoso'>
                     <h1 className='noAsignado'>Hubo un error</h1>
                     <p className='vuelveAIntentar'>Por favor, vuelve a intentarlo</p>
-                    <img className='imagenError' src="/error.png" alt="Error" />
+                    <img className='imagenError' src={error} alt="Error" />
                     <button className='botonVolverInicio' onClick={volverAlInicio}>
                         Volver al inicio
                     </button>
