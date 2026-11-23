@@ -69,9 +69,11 @@ body {
 /* Imagen del ejercicio (cuadrado) */
 .imgEjercicio {
     width: 210px;
-    height: 180px;
+    flex: 1 1 0;
+    min-height: 0px;
+    margin-bottom: 15px;
     background-color: #dcdcdc; /* Color gris de fondo por si tarda en cargar la foto */
-    object-fit: cover;
+    object-fit: contain;
 }
 
 /* Botón Confirmar (es una imagen en tu JSX) */
