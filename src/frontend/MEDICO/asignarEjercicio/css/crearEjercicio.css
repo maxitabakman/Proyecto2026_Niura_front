@@ -118,7 +118,7 @@
 }
 
 /* Evita que la flecha de subida se haga gigante */
-.upload-icon {
+.main-container .upload-icon {
     width: 18px !important;
     height: 18px !important;
     min-width: 18px;

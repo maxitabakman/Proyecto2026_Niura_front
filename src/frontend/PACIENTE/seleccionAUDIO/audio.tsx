@@ -5,6 +5,7 @@ import microfono from './microfono.png';
 import botonPausa from './pausarSeguir.png';
 import videoOnda from './download (3).mp4'
 import './audio.css';
+import '../seleccionVIDEO/subirVideo.css'
 
 export default function SeleccionAudio() {
   const { type, id } = useParams();
@@ -99,9 +100,11 @@ export default function SeleccionAudio() {
       )}
   
       {audioUrl && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', marginTop: '30px' }}>
-          <audio src={audioUrl} controls style={{ marginBottom: '30px', width: '300px' }} />
-          <img src={confirmar} className="btn-confirmar-img" onClick={saveAudioFile} alt="Confirmar" />        
+        <div className='estado-previsualizacion'>
+          <div className='tarjeta-celeste'>
+            <audio src={audioUrl} controls style={{ width: '300px' }} />
+            <img src={confirmar} className="btn-confirmar-img" onClick={saveAudioFile} alt="Confirmar" />        
+          </div>
         </div>
       )}
     </div>

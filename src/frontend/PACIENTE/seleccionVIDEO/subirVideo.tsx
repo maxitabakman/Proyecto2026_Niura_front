@@ -129,7 +129,6 @@ export default function Video() {
             {videoPrevisualizado && (
                 <div className="estado-previsualizacion">
                     <div className="tarjeta-celeste">
-                        <span className="titulo-seccion">video</span>
                         <video 
                             controls 
                             src={videoPrevisualizado} 

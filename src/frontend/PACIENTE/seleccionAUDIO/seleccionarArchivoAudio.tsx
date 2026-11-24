@@ -116,7 +116,7 @@ export default function SubirArchivoAudio() {
                             className="input-oculto"
                             disabled={cargando}
                         />
-                        {audioUrl && <audio className="video-preview" controls src={audioUrl} />}
+                        {audioUrl && <audio className="audio-preview" controls src={audioUrl} />}
                         {error && <p role="alert" className="text-red-800">{error}</p>}
                         <button
                             type="button"
